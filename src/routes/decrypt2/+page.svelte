@@ -1,0 +1,163 @@
+<script>
+
+import * as IrmaCore from "@privacybydesign/irma-core";
+import * as IrmaClient from "@privacybydesign/irma-client";
+import * as IrmaPopup from "@privacybydesign/irma-popup";
+import "@privacybydesign/irma-css";
+
+//import { PolyfilledWritableStream } from "web-streams-polyfill";
+import { createWriteStream } from "streamsaver";
+
+import { onMount } from 'svelte';
+
+
+const pkg = "https://main.irmaseal-pkg.ihub.ru.nl";
+var mpk;
+var mod;
+//let inFile;
+let planetPromise = getPlanet();
+
+
+async function getPlanet() {
+    mod = await import("@e4a/irmaseal-wasm-bindings");
+    console.log("loaded WASM module");
+
+    const resp = await fetch(`${pkg}/v2/parameters`);
+    mpk = await resp.json().then((r) => r.publicKey);
+
+    console.log("type of mpk: ", typeof mpk);
+
+    console.log("retrieved public key: ", mpk);
+    //console.log("resp: ", resp);
+}
+
+// function handleClick() {
+// 	console.log("send missile");
+
+//     console.log("input file: ", inFile);
+// }
+
+
+onMount(() => {
+    
+
+    const buttons = document.querySelectorAll("input");
+    buttons.forEach((btn) => btn.addEventListener("change", listener));
+});
+
+const listener = async (event) => {
+  const decrypt = event.srcElement.classList.contains("decrypt");
+  const [inFile] = event.srcElement.files;
+
+  console.log("infile: ", [inFile]);
+
+  const outFileName = decrypt
+    ? inFile.name.replace(".encrypted", ".eml")
+    : `${inFile.name}.encrypted`;
+  const fileWritable = createWriteStream(outFileName);
+
+  const readable = inFile.stream();
+  const writable = fileWritable;
+
+    try {
+        const unsealer = await mod.Unsealer.new(readable);
+        const hidden = unsealer.get_hidden_policies();
+
+        const keyRequest = {
+        con: [{ t: "pbdf.sidn-pbdf.email.email", v: "esthrshi@gmail.com" },
+                { t: "pbdf.gemeente.personalData.surname"}
+            ],
+        };
+        
+        const identifier = "esthrshi@gmail.com";
+
+        const timestamp = hidden[identifier].ts;
+
+        console.log("timestamp: ", timestamp);
+
+        const session = {
+        url: pkg,
+        start: {
+            url: (o) => `${o.url}/v2/request/start`,
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(keyRequest),
+        },
+        mapping: {
+            // temporary fix
+            sessionPtr: (r) => {
+            const ptr = r.sessionPtr;
+            ptr.u = `https://ihub.ru.nl/irma/1/${ptr.u}`;
+            return ptr;
+            },
+        },
+        result: {
+            url: (o, { sessionToken }) =>
+            `${o.url}/v2/request/jwt/${sessionToken}`,
+            parseResponse: (r) => {
+            return r
+                .text()
+                .then((jwt) =>
+                fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
+                    headers: {
+                    Authorization: `Bearer ${jwt}`,
+                    },
+                })
+                )
+                .then((r) => r.json())
+                .then((json) => {
+                if (json.status !== "DONE" || json.proofStatus !== "VALID")
+                    throw new Error("not done and valid");
+                return json.key;
+                })
+                .catch((e) => console.log("error: ", e));
+            },
+        },
+        };
+
+        const irma = new IrmaCore({ debugging: true, session });
+
+        irma.use(IrmaClient);
+        irma.use(IrmaPopup);
+
+        const usk = await irma.start();
+        console.log("retrieved usk: ", usk);
+
+        const t0 = performance.now();
+
+        await unsealer.unseal(identifier, usk, writable);
+        
+        const tDecrypt = performance.now() - t0;
+
+        console.log(`tDecrypt ${tDecrypt}$ ms`);
+        console.log(`average MB/s: ${inFile.size / (1000 * tDecrypt)}`);
+
+    } 
+    catch (e) {
+        console.log("error during unsealing: ", e);
+    }
+  
+};
+
+</script>
+
+
+<h2>Decryption2</h2>
+
+
+{#await planetPromise}
+Loading planet...
+{:then planet}
+Retrieved public key
+{:catch someError}
+System error: {someError.message}.
+{/await}
+
+<input 
+    type=file 
+    id="decrypt"
+/>
+
+<!-- <button on:click|once={handleClick}>
+	Send file
+</button> -->

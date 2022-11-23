@@ -2,6 +2,7 @@
 	"name": "postguard-wasm2",
 	"version": "0.0.1",
 	"private": true,
+	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
@@ -13,6 +14,8 @@
 	},
 	"devDependencies": {
 		"@e4a/irmaseal-wasm-bindings": "0.2.2-beta.0",
+		"@esbuild-plugins/node-globals-polyfill": "^0.1.1",
+		"@esbuild-plugins/node-modules-polyfill": "^0.1.4",
 		"@sveltejs/adapter-auto": "next",
 		"@sveltejs/kit": "next",
 		"@typescript-eslint/eslint-plugin": "^5.27.0",
@@ -22,6 +25,7 @@
 		"eslint-plugin-svelte3": "^4.0.0",
 		"prettier": "^2.6.2",
 		"prettier-plugin-svelte": "^2.7.0",
+		"streamsaver": "^2.0.6",
 		"svelte": "^3.44.0",
 		"svelte-check": "^2.7.1",
 		"svelte-preprocess": "^4.10.6",
@@ -31,5 +35,11 @@
 		"vite-plugin-top-level-await": "^1.2.1",
 		"vite-plugin-wasm": "^3.1.0"
 	},
-	"type": "module"
+	"dependencies": {
+		"@privacybydesign/irma-client": "^0.4.3",
+		"@privacybydesign/irma-core": "^0.4.3",
+		"@privacybydesign/irma-css": "^0.4.3",
+		"@privacybydesign/irma-popup": "^0.4.3",
+		"web-streams-polyfill": "^3.2.1"
+	}
 }

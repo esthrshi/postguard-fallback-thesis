@@ -1,5 +1,5 @@
 {
-	"name": "postguard-wasm2",
+	"name": "postguard-fallback-thesis",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",

@@ -1,4 +1,5 @@
 <script>
+
 import * as IrmaCore from "@privacybydesign/irma-core";
 import * as IrmaClient from "@privacybydesign/irma-client";
 import * as IrmaPopup from "@privacybydesign/irma-popup";
@@ -29,85 +30,14 @@ var showthis = false;
 var showcreds = false;
 var enableButton = false;
 var senddecrypt = false;
+var unsealer;
+var writable;
+var inFile;
 
-
-let planetPromise = getPlanet();
-
-function doDecrypt() {
-    senddecrypt = true;
-    console.log("hello");
-  }
-
-
-async function getPlanet() {
-    mod = await import("@e4a/irmaseal-wasm-bindings");
-    console.log("loaded WASM module");
-
-    const resp = await fetch(`${pkg}/v2/parameters`);
-    mpk = await resp.json().then((r) => r.publicKey);
-
-    console.log("type of mpk: ", typeof mpk);
-
-    console.log("retrieved public key: ", mpk);
-    //console.log("resp: ", resp);
-}
-
-// function handleClick() {
-// 	console.log("send missile");
-
-//     console.log("input file: ", inFile);
-// }
-
-
-onMount(() => {
-    
-
-    const buttons = document.querySelectorAll("input");
-    buttons.forEach((btn) => btn.addEventListener("change", listener));
-});
-
-const listener = async (event) => {
-  const decrypt = event.srcElement.classList.contains("decrypt");
-  const [inFile] = event.srcElement.files;
-
-  console.log("infile: ", [inFile]);
-
-  const outFileName = decrypt
-    ? inFile.name.replace(".encrypted", ".eml")
-    : `${inFile.name}.encrypted`;
-  const fileWritable = createWriteStream(outFileName);
-
-  const readable = inFile.stream();
-  const writable = fileWritable;
-
-    try {
-        const unsealer = await mod.Unsealer.new(readable);
-        //const unsealer = mod.Unsealer.new(readable);
-        const hidden = unsealer.get_hidden_policies();
-
-        console.log("hidden: ", hidden)
-
-        Functions.handleRecipients(hidden);
-
-        // this is a workaround, can be easier?
-        if(Functions.showSelection) {
-            showthis = true;
-        }
-
-        if(Functions.showCreds) {
-            showcreds = true;
-        }
-
-        if(Functions.enableButton) {
-            enableButton = true;
-        }
-
-
-
-
-        //if(true) {
-
-        const keyRequest = Functions.keyRequest
+// needs to be renamed
+// very messy
+async function testa() {
+    const keyRequest = Functions.keyRequest
         const identifier = Functions.identifier
         const timestamp = Functions.timestamp
 
@@ -156,23 +86,93 @@ const listener = async (event) => {
         },
         };
 
-            const irma = new IrmaCore({ debugging: true, session });
+        const irma = new IrmaCore({ debugging: true, session });
 
-            irma.use(IrmaClient);
-            irma.use(IrmaPopup);
+        irma.use(IrmaClient);
+        irma.use(IrmaPopup);
 
-            const usk = await irma.start();
-            console.log("retrieved usk: ", usk);
+        const usk = await irma.start();
+        console.log("retrieved usk: ", usk);
 
-            const t0 = performance.now();
+        const t0 = performance.now();
 
-            await unsealer.unseal(identifier, usk, writable);
-            
-            const tDecrypt = performance.now() - t0;
+        await unsealer.unseal(identifier, usk, writable);
+        
+        const tDecrypt = performance.now() - t0;
 
-            console.log(`tDecrypt ${tDecrypt}$ ms`);
-            console.log(`average MB/s: ${inFile.size / (1000 * tDecrypt)}`);
+        console.log(`tDecrypt ${tDecrypt}$ ms`);
+        console.log(`average MB/s: ${inFile.size / (1000 * tDecrypt)}`);
+}
+
+// rename function
+function bloop(sel1) {
+    enableButton = true;
+    Functions.bla(sel1)
+}
+
+let planetPromise = getPlanet();
+
+
+async function getPlanet() {
+    mod = await import("@e4a/irmaseal-wasm-bindings");
+    console.log("loaded WASM module");
+
+    const resp = await fetch(`${pkg}/v2/parameters`);
+    mpk = await resp.json().then((r) => r.publicKey);
+
+    console.log("type of mpk: ", typeof mpk);
+
+    console.log("retrieved public key: ", mpk);
+    //console.log("resp: ", resp);
+}
+
+
+onMount(() => {
+    const buttons = document.querySelectorAll("input");
+    buttons.forEach((btn) => btn.addEventListener("change", listener));
+});
+
+const listener = async (event) => {
+  const decrypt = event.srcElement.classList.contains("decrypt");
+  [inFile] = event.srcElement.files;
+
+  console.log("infile: ", [inFile]);
+
+  const outFileName = decrypt
+    ? inFile.name.replace(".encrypted", ".eml")
+    : `${inFile.name}.encrypted`;
+  const fileWritable = createWriteStream(outFileName);
+
+  const readable = inFile.stream();
+  writable = fileWritable;
+
+    try {
+        unsealer = await mod.Unsealer.new(readable);
+        //const unsealer = mod.Unsealer.new(readable);
+        const hidden = unsealer.get_hidden_policies();
+
+        console.log("hidden: ", hidden)
+
+        Functions.handleRecipients(hidden);
+
+        // this is a workaround, can be easier?
+        if(Functions.showSelection) {
+            showthis = true;
         }
+
+        if(Functions.showCreds) {
+            showcreds = true;
+        }
+
+        console.log("check enableButton")
+        if(Functions.enableButton) {
+            enableButton = true;
+        }
+
+        //if(true) {
+
+        
+    }
 
    // } 
     catch (e) {
@@ -204,7 +204,7 @@ System error: {someError.message}.
 <!-- show selection dropdown when there are multiple recipients-->
 {#if showthis }
 	<p>show selection</p>
-    <select bind:value={sel1} on:change={() => Functions.bla(sel1) }>
+    <select bind:value={sel1} on:change={() => bloop(sel1) }>
         {#each Functions.allkeys as key}
             <option value={key}>
                 {key}
@@ -225,6 +225,6 @@ System error: {someError.message}.
 
 
 <!-- added submit button for UX reasons -->
-<button disabled={!enableButton} on:click={doDecrypt}>
+<button disabled={!enableButton} on:click={testa}>
 	Decrypt
 </button>

@@ -10,11 +10,13 @@ import { createWriteStream } from "streamsaver";
 
 import { onMount } from 'svelte';
 
+import * as Functions from './+page.js'
+
 
 const pkg = "https://main.irmaseal-pkg.ihub.ru.nl";
 var mpk;
 var mod;
-//let inFile;
+
 let planetPromise = getPlanet();
 
 
@@ -63,17 +65,14 @@ const listener = async (event) => {
         const unsealer = await mod.Unsealer.new(readable);
         const hidden = unsealer.get_hidden_policies();
 
-        const keyRequest = {
-        con: [{ t: "pbdf.sidn-pbdf.email.email", v: "esthrshi@gmail.com" },
-                { t: "pbdf.gemeente.personalData.surname"}
-            ],
-        };
-        
-        const identifier = "esthrshi@gmail.com";
+        Functions.handleRecipients(hidden);
 
-        const timestamp = hidden[identifier].ts;
+        const keyRequest = Functions.keyRequest
+        const identifier = Functions.identifier
+        const timestamp = Functions.timestamp
 
         console.log("timestamp: ", timestamp);
+        // what is the timestamp for?
 
         const session = {
         url: pkg,
@@ -84,7 +83,7 @@ const listener = async (event) => {
             body: JSON.stringify(keyRequest),
         },
         mapping: {
-            // temporary fix
+            // temporary fix, what is this fix for?
             sessionPtr: (r) => {
             const ptr = r.sessionPtr;
             ptr.u = `https://ihub.ru.nl/irma/1/${ptr.u}`;

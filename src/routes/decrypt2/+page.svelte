@@ -17,6 +17,8 @@ const pkg = "https://main.irmaseal-pkg.ihub.ru.nl";
 var mpk;
 var mod;
 
+var testbool = false;
+
 let planetPromise = getPlanet();
 
 
@@ -65,7 +67,10 @@ const listener = async (event) => {
         const unsealer = await mod.Unsealer.new(readable);
         const hidden = unsealer.get_hidden_policies();
 
+        console.log("hidden: ", hidden)
+
         Functions.handleRecipients(hidden);
+        testbool = true;
 
         const keyRequest = Functions.keyRequest
         const identifier = Functions.identifier
@@ -156,6 +161,18 @@ System error: {someError.message}.
     type=file 
     id="decrypt"
 />
+
+{#if Functions.showSelection}
+	<p>show selection</p>>
+{/if}
+
+<!-- <select value={selected} on:change="{() => answer = ''}">
+    {#each questions as question}
+        <option value={question}>
+            {question.text}
+        </option>
+    {/each}
+</select> -->
 
 <!-- <button on:click|once={handleClick}>
 	Send file

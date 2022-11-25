@@ -1,5 +1,4 @@
 <script>
-
 import * as IrmaCore from "@privacybydesign/irma-core";
 import * as IrmaClient from "@privacybydesign/irma-client";
 import * as IrmaPopup from "@privacybydesign/irma-popup";
@@ -17,9 +16,27 @@ const pkg = "https://main.irmaseal-pkg.ihub.ru.nl";
 var mpk;
 var mod;
 
+let sel1 = '';
+
 var testbool = false;
 
+$: if (Functions.showSelection) {
+    console.log("show selection is on");
+}
+
+//export var test1 = false;
+var showthis = false;
+var showcreds = false;
+var enableButton = false;
+var senddecrypt = false;
+
+
 let planetPromise = getPlanet();
+
+function doDecrypt() {
+    senddecrypt = true;
+    console.log("hello");
+  }
 
 
 async function getPlanet() {
@@ -65,12 +82,30 @@ const listener = async (event) => {
 
     try {
         const unsealer = await mod.Unsealer.new(readable);
+        //const unsealer = mod.Unsealer.new(readable);
         const hidden = unsealer.get_hidden_policies();
 
         console.log("hidden: ", hidden)
 
         Functions.handleRecipients(hidden);
-        testbool = true;
+
+        // this is a workaround, can be easier?
+        if(Functions.showSelection) {
+            showthis = true;
+        }
+
+        if(Functions.showCreds) {
+            showcreds = true;
+        }
+
+        if(Functions.enableButton) {
+            enableButton = true;
+        }
+
+
+
+
+        //if(true) {
 
         const keyRequest = Functions.keyRequest
         const identifier = Functions.identifier
@@ -78,6 +113,8 @@ const listener = async (event) => {
 
         console.log("timestamp: ", timestamp);
         // what is the timestamp for?
+
+        testbool = true;
 
         const session = {
         url: pkg,
@@ -119,24 +156,25 @@ const listener = async (event) => {
         },
         };
 
-        const irma = new IrmaCore({ debugging: true, session });
+            const irma = new IrmaCore({ debugging: true, session });
 
-        irma.use(IrmaClient);
-        irma.use(IrmaPopup);
+            irma.use(IrmaClient);
+            irma.use(IrmaPopup);
 
-        const usk = await irma.start();
-        console.log("retrieved usk: ", usk);
+            const usk = await irma.start();
+            console.log("retrieved usk: ", usk);
 
-        const t0 = performance.now();
+            const t0 = performance.now();
 
-        await unsealer.unseal(identifier, usk, writable);
-        
-        const tDecrypt = performance.now() - t0;
+            await unsealer.unseal(identifier, usk, writable);
+            
+            const tDecrypt = performance.now() - t0;
 
-        console.log(`tDecrypt ${tDecrypt}$ ms`);
-        console.log(`average MB/s: ${inFile.size / (1000 * tDecrypt)}`);
+            console.log(`tDecrypt ${tDecrypt}$ ms`);
+            console.log(`average MB/s: ${inFile.size / (1000 * tDecrypt)}`);
+        }
 
-    } 
+   // } 
     catch (e) {
         console.log("error during unsealing: ", e);
     }
@@ -162,18 +200,31 @@ System error: {someError.message}.
     id="decrypt"
 />
 
-{#if Functions.showSelection}
-	<p>show selection</p>>
+<!-- this doesn't work if the variable isn't from this file?????-->
+<!-- show selection dropdown when there are multiple recipients-->
+{#if showthis }
+	<p>show selection</p>
+    <select bind:value={sel1} on:change={() => Functions.bla(sel1) }>
+        {#each Functions.allkeys as key}
+            <option value={key}>
+                {key}
+            </option>
+        {/each}
+    </select>
+
+    <p>selected value is {sel1}</p>
 {/if}
 
-<!-- <select value={selected} on:change="{() => answer = ''}">
-    {#each questions as question}
-        <option value={question}>
-            {question.text}
-        </option>
-    {/each}
-</select> -->
 
-<!-- <button on:click|once={handleClick}>
-	Send file
-</button> -->
+{#if showcreds}
+<p>Your credentials:</p>
+    {#each Functions.thecredst as t}
+        {t}<br>
+    {/each}
+{/if}
+
+
+<!-- added submit button for UX reasons -->
+<button disabled={!enableButton} on:click={doDecrypt}>
+	Decrypt
+</button>

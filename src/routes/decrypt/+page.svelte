@@ -1,5 +1,4 @@
 <script>
-
 import * as IrmaCore from "@privacybydesign/irma-core";
 import * as IrmaClient from "@privacybydesign/irma-client";
 import * as IrmaPopup from "@privacybydesign/irma-popup";
@@ -7,49 +6,75 @@ import "@privacybydesign/irma-css";
 
 //import { PolyfilledWritableStream } from "web-streams-polyfill";
 import { createWriteStream } from "streamsaver";
-
 import { onMount } from 'svelte';
 
 
 const pkg = "https://main.irmaseal-pkg.ihub.ru.nl";
-var mpk;
 var mod;
+var mpk;
+
+var writable;
+
+var recip;
 
 let sel1 = '';
 
 var testbool = false;
 
-//export var test1 = false;
 var showthis = false;
 var showcreds = false;
 var enableButton = false;
-var senddecrypt = false;
 var unsealer;
-var writable;
 var inFile;
 
  var keyRequest1
  var identifier1
  var timestamp1
- var showSelection = false;
- let selected;
+ var showSelection = false
  var allkeys;
 
- var showCreds = false;
- var thecredst = [];
- var thecredsv;
+ var showCreds = false
+ var thecredst = []
 
-let thecreds = [
-    { t: 'weee', v: '' }
-];
+var enableButton = false
 
-var enableButton = false;
+var recip1
 
-var recip1;
+
+// listen for file upload
+onMount(() => {
+    const buttons = document.querySelectorAll("input");
+    buttons.forEach((btn) => btn.addEventListener("change", listener));
+})
+
+// load WASM module and get key
+async function loadModule() {
+    mod = await import("@e4a/irmaseal-wasm-bindings");
+    const resp = await fetch(`${pkg}/v2/parameters`);
+    mpk = await resp.json().then((r) => r.publicKey);
+}
+
+// take input file and get hidden policies
+const listener = async (event) => {
+  const decrypt = event.srcElement.classList.contains("decrypt");
+  [inFile] = event.srcElement.files;
+  const fileWritable = createWriteStream("postguard.eml");
+
+  const readable = inFile.stream();
+  writable = fileWritable;
+
+    try {
+        unsealer = await mod.Unsealer.new(readable);
+        recip = unsealer.get_hidden_policies();
+        handleRecipients(recip);
+    }
+    catch (e) {
+        console.log("error during unsealing: ", e);
+    }
+}
 
 // takes the recipient(s) from the encrypted file and processes them
 function handleRecipients(recip) {
-    recip1 = recip;
 
     // check if there is one (1) recipient or multiple
     if (Object.keys(recip).length == 1) {
@@ -232,86 +257,15 @@ function bloop(sel1) {
     bla(sel1)
 }
 
-let planetPromise = getPlanet();
-
-
-async function getPlanet() {
-    mod = await import("@e4a/irmaseal-wasm-bindings");
-    console.log("loaded WASM module");
-
-    const resp = await fetch(`${pkg}/v2/parameters`);
-    mpk = await resp.json().then((r) => r.publicKey);
-
-    console.log("type of mpk: ", typeof mpk);
-
-    console.log("retrieved public key: ", mpk);
-    //console.log("resp: ", resp);
-}
-
-
-onMount(() => {
-    const buttons = document.querySelectorAll("input");
-    buttons.forEach((btn) => btn.addEventListener("change", listener));
-});
-
-const listener = async (event) => {
-  const decrypt = event.srcElement.classList.contains("decrypt");
-  [inFile] = event.srcElement.files;
-
-  console.log("infile: ", [inFile]);
-
-  const outFileName = decrypt
-    ? inFile.name.replace(".encrypted", ".eml")
-    : `${inFile.name}.encrypted`;
-  const fileWritable = createWriteStream(outFileName);
-
-  const readable = inFile.stream();
-  writable = fileWritable;
-
-    try {
-        unsealer = await mod.Unsealer.new(readable);
-        //const unsealer = mod.Unsealer.new(readable);
-        const hidden = unsealer.get_hidden_policies();
-
-        console.log("hidden: ", hidden)
-
-        handleRecipients(hidden);
-
-        // this is a workaround, can be easier?
-        if(showSelection) {
-            showthis = true;
-        }
-
-        if(showCreds) {
-            showcreds = true;
-        }
-
-        console.log("check enableButton")
-        if(enableButton) {
-            enableButton = true;
-        }
-
-        //if(true) {
-
-        
-    }
-
-   // } 
-    catch (e) {
-        console.log("error during unsealing: ", e);
-    }
-  
-};
-
 </script>
 
 
 <h2>Decryption2</h2>
 
 
-{#await planetPromise}
-Loading planet...
-{:then planet}
+{#await loadModule()}
+Loading decryption module...
+{:then x}
 Retrieved public key
 {:catch someError}
 System error: {someError.message}.

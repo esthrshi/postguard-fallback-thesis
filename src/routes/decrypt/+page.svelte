@@ -10,17 +10,255 @@ import { createWriteStream } from "streamsaver";
 
 import { onMount } from 'svelte';
 
+
 const pkg = "https://main.irmaseal-pkg.ihub.ru.nl";
 var mpk;
 var mod;
-//let decryptfile;
+
+let sel1 = '';
+
+var testbool = false;
+
+//export var test1 = false;
+var showthis = false;
+var showcreds = false;
+var enableButton = false;
+var senddecrypt = false;
+var unsealer;
+var writable;
+var inFile;
+
+ var keyRequest1
+ var identifier1
+ var timestamp1
+ var showSelection = false;
+ let selected;
+ var allkeys;
+
+ var showCreds = false;
+ var thecredst = [];
+ var thecredsv;
+
+let thecreds = [
+    { t: 'weee', v: '' }
+];
+
+var enableButton = false;
+
+var recip1;
+
+// takes the recipient(s) from the encrypted file and processes them
+function handleRecipients(recip) {
+    recip1 = recip;
+
+    // check if there is one (1) recipient or multiple
+    if (Object.keys(recip).length == 1) {
+        console.log("one recipient")
+        oneRecipient(recip, 'esthrshi@gmail.com');
+    } else {
+        console.log("multiple recipients")
+        multRecipients(recip)
+    }
+}
+
+// in case there is only one recipient specified
+function oneRecipient(recip, id) {
+
+    //Object.keys(hidden)
+    let key = Object.keys(recip)  // get the key (email) of the recipient
+    console.log('key: ', key)
+    identifier1 = String(key)  // get the identifier, cast it to a string
+    timestamp1 = recip[identifier1].ts  // create timestamp
+
+    console.log("recip: ", recip)
+
+    let kr = recip  // set up key request
+    kr[key[0]]["con"]["0"]["v"] = identifier1  // put the email in the email value of the keyrequest
+
+    // remove value key from all non-email attributes
+    for (var i = 1; i < kr[key[0]]["con"].length; i++) {
+
+        // check if there are attributes of the following type: mobile number, surf ID
+        // display their preview to the user
+        // ask leon if i need to pay attention to any other attributes
+        if(kr[key[0]]["con"][i]["t"] == "pbdf.sidn-pbdf.mobilenumber.mobilenumber") {
+            showCreds = true;
+            thecredst.push("Mobile number: " + kr[key[0]]["con"][i]["v"])
+        }
+        if(kr[key[0]]["con"][i]["t"] == "pbdf.pbdf.surfnet-2.id") {
+            showCreds = true;
+            thecredst.push("Student ID: " + kr[key[0]]["con"][i]["v"])
+        }
+
+        delete kr[key[0]]["con"][i]["v"];
+    }
+
+    // create key request
+    keyRequest1 = {
+        con: 
+            kr[key[0]]["con"] // check this
+    }
+
+    console.log("key request: ", keyRequest1)
+    enableButton = true;
+}
+
+// in case there are multiple recipients specified, ask user to identify themselves
+function multRecipients(recip) {
+    showSelection = true;
+    allkeys = Object.keys(recip)
+    console.log("all keys: ", allkeys)
+}
+
+
+// most of this is same as oneRecipient so better to merge them
+function bla(identifier) {
+    console.log("selected someone: ", identifier)
+    //console.log("typeof: ", typeof x)
+
+        //Object.keys(hidden)
+    //let key = Object.keys(recip)  // get the key (email) of the recipient
+    //console.log('key: ', key)
+    //identifier = String(key)  // get the identifier, cast it to a string
+    timestamp1 = recip1[identifier].ts  // create timestamp
+
+    console.log("recip: ", recip1)
+
+    //console.log()
+    let kr = recip1  // set up key request
+    kr[identifier]["con"]["0"]["v"] = identifier  // put the email in the email value of the keyrequest
+
+    // remove value key from all non-email attributes
+    for (var i = 1; i < kr[identifier]["con"].length; i++) {
+
+        // check if there are attributes of the following type: mobile number, surf ID
+        // display their preview to the user
+        // ask leon if i need to pay attention to any other attributes
+        if(kr[identifier]["con"][i]["t"] == "pbdf.sidn-pbdf.mobilenumber.mobilenumber" || 
+           kr[identifier]["con"][i]["t"] == "pbdf.pbdf.surfnet-2.id") {
+            console.log("t: ", kr[identifier]["con"][i]["t"])
+        }
+
+        delete kr[identifier]["con"][i]["v"];
+    }
+
+    // create key request
+    keyRequest1 = {
+        con: 
+            kr[identifier]["con"]
+    }
+
+    console.log("key request: ", keyRequest1)
+    console.log("multiple recipientssss")
+    enableButton = true;
+
+
+   // console.log("this rec: ", recip1[key])
+}
+
+// needs to be renamed
+// very messy
+async function testa() {
+    const keyRequest = keyRequest1
+        const identifier = identifier1
+        const timestamp = timestamp1
+
+        console.log("timestamp: ", timestamp);
+        // what is the timestamp for?
+
+        testbool = true;
+
+        const session = {
+        url: pkg,
+        start: {
+            url: (o) => `${o.url}/v2/request/start`,
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(keyRequest),
+        },
+        mapping: {
+            // temporary fix, what is this fix for?
+            sessionPtr: (r) => {
+            const ptr = r.sessionPtr;
+            ptr.u = `https://ihub.ru.nl/irma/1/${ptr.u}`;
+            return ptr;
+            },
+        },
+        result: {
+            url: (o, { sessionToken }) =>
+            `${o.url}/v2/request/jwt/${sessionToken}`,
+            parseResponse: (r) => {
+            return r
+                .text()
+                .then((jwt) =>
+                fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
+                    headers: {
+                    Authorization: `Bearer ${jwt}`,
+                    },
+                })
+                )
+                .then((r) => r.json())
+                .then((json) => {
+                if (json.status !== "DONE" || json.proofStatus !== "VALID")
+                    throw new Error("not done and valid");
+                return json.key;
+                })
+                .catch((e) => console.log("error: ", e));
+            },
+        },
+        };
+
+        const irma = new IrmaCore({ debugging: true, session });
+
+        irma.use(IrmaClient);
+        irma.use(IrmaPopup);
+
+        const usk = await irma.start();
+        console.log("retrieved usk: ", usk);
+
+        const t0 = performance.now();
+
+        await unsealer.unseal(identifier, usk, writable);
+        
+        const tDecrypt = performance.now() - t0;
+
+        console.log(`tDecrypt ${tDecrypt}$ ms`);
+        console.log(`average MB/s: ${inFile.size / (1000 * tDecrypt)}`);
+}
+
+// rename function
+function bloop(sel1) {
+    enableButton = true;
+    bla(sel1)
+}
+
 let planetPromise = getPlanet();
 
-let files;
+
+async function getPlanet() {
+    mod = await import("@e4a/irmaseal-wasm-bindings");
+    console.log("loaded WASM module");
+
+    const resp = await fetch(`${pkg}/v2/parameters`);
+    mpk = await resp.json().then((r) => r.publicKey);
+
+    console.log("type of mpk: ", typeof mpk);
+
+    console.log("retrieved public key: ", mpk);
+    //console.log("resp: ", resp);
+}
+
+
+onMount(() => {
+    const buttons = document.querySelectorAll("input");
+    buttons.forEach((btn) => btn.addEventListener("change", listener));
+});
 
 const listener = async (event) => {
   const decrypt = event.srcElement.classList.contains("decrypt");
-  const [inFile] = event.srcElement.files;
+  [inFile] = event.srcElement.files;
+
+  console.log("infile: ", [inFile]);
 
   const outFileName = decrypt
     ? inFile.name.replace(".encrypted", ".eml")
@@ -28,72 +266,87 @@ const listener = async (event) => {
   const fileWritable = createWriteStream(outFileName);
 
   const readable = inFile.stream();
-};
+  writable = fileWritable;
 
-async function getPlanet() {
-  const resp = await fetch(`${pkg}/v2/parameters`);
-  mpk = await resp.json().then((r) => r.publicKey);
+    try {
+        unsealer = await mod.Unsealer.new(readable);
+        //const unsealer = mod.Unsealer.new(readable);
+        const hidden = unsealer.get_hidden_policies();
 
-  console.log("retrieved public key: ", mpk);
-  //console.log("resp: ", resp);
-}
+        console.log("hidden: ", hidden)
 
-// removed await (async) here, will that cause problems?
-onMount(() => {
+        handleRecipients(hidden);
+
+        // this is a workaround, can be easier?
+        if(showSelection) {
+            showthis = true;
+        }
+
+        if(showCreds) {
+            showcreds = true;
+        }
+
+        console.log("check enableButton")
+        if(enableButton) {
+            enableButton = true;
+        }
+
+        //if(true) {
+
+        
+    }
+
+   // } 
+    catch (e) {
+        console.log("error during unsealing: ", e);
+    }
   
-  //mpk = await resp.json().then((r) => r.publicKey);
-
-  //console.log("retrieved public key: ", mpk);
-
-  mod = import("@e4a/irmaseal-wasm-bindings");
-  console.log("loaded WASM module");
-
-  //const buttons = document.querySelectorAll("input");
-  //buttons.forEach((btn) => btn.addEventListener("change", listener));
-});
+};
 
 </script>
 
-<!-- <script>
 
-import * as IrmaCore from "@privacybydesign/irma-core";
-import * as IrmaClient from "@privacybydesign/irma-client";
-import * as IrmaPopup from "@privacybydesign/irma-popup";
-import "@privacybydesign/irma-css";
+<h2>Decryption2</h2>
 
-var mod;
 
-window.onload = async () => {
+{#await planetPromise}
+Loading planet...
+{:then planet}
+Retrieved public key
+{:catch someError}
+System error: {someError.message}.
+{/await}
 
-  mod = await import("@e4a/irmaseal-wasm-bindings");
-  console.log("loaded WASM module");
-
- };
-
-</script> -->
-
-<h2>Decryption</h2>
-
-<!-- <input 
-    bind:decryptfile
+<input 
+    type=file 
     id="decrypt"
-    type="file"
-    /> -->
-
-  {#await planetPromise}
-		Loading planet...
-	{:then planet}
-		Retrieved public key
-	{:catch someError}
-		System error: {someError.message}.
-	{/await}
-
-  <label for="decrypt">Upload an encrypted file:</label>
-<input
-	bind:files
-	id="decrypt"
-	type="file"
 />
 
-<!-- <input type="file" class="encrypt">encrypt file />
-<input type="file" class="decrypt">decrypt file /> -->
+<!-- this doesn't work if the variable isn't from this file?????-->
+<!-- show selection dropdown when there are multiple recipients-->
+{#if showthis }
+	<p>show selection</p>
+    <select bind:value={sel1} on:change={() => bloop(sel1) }>
+        {#each allkeys as key}
+            <option value={key}>
+                {key}
+            </option>
+        {/each}
+    </select>
+
+    <p>selected value is {sel1}</p>
+{/if}
+
+
+{#if showcreds}
+<p>Your credentials:</p>
+    {#each thecredst as t}
+        {t}<br>
+    {/each}
+{/if}
+
+
+<!-- added submit button for UX reasons -->
+<button disabled={!enableButton} on:click={testa}>
+	Decrypt
+</button>

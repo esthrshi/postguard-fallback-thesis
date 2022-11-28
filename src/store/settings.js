@@ -1,14 +1,12 @@
 import { writable } from 'svelte/store'
-import {browser} from '$app/environment';
+import {browser} from '$app/environment'
 
-//export const doCacheEmails = writable(false)
-//export const doCacheIRMA = writable(false)
-
-export const userName = writable (
-    browser && (localStorage.getItem("userName") || "blabla")
+export const boolCacheEmail = writable (
+    browser && (JSON.parse(localStorage.getItem("boolCacheEmail") || "false" ) )
 )
+boolCacheEmail.subscribe((val) => browser && (localStorage.boolCacheEmail = JSON.stringify(val)))
 
-userName.subscribe((val) => browser && (localStorage.userName = val))
-
-// export const storeCacheEmails = localStore('cache emails', doCacheEmails)
-// export const storeCacheIRMA = localStore('cache IRMA', doCacheIRMA)
+export const boolCacheIRMA = writable (
+    browser && (JSON.parse(localStorage.getItem("boolCacheIRMA") || "false" ) )
+)
+boolCacheIRMA.subscribe((val) => browser && (localStorage.boolCacheIRMA = JSON.stringify(val)))

@@ -14,6 +14,10 @@
 				<a href="/decrypt">Decrypt</a>
 			</li>
 
+			<li aria-current={$page.url.pathname === '/email' ? 'page' : undefined}>
+				<a href="/email">Email History</a>
+			</li>
+
 			<li aria-current={$page.url.pathname === '/settings' ? 'page' : undefined}>
 				<a href="/settings">Settings</a>
 			</li>

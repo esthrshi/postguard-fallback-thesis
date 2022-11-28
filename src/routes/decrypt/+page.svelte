@@ -8,6 +8,11 @@ import "@privacybydesign/irma-css";
 import { createWriteStream } from "streamsaver";
 import { onMount } from 'svelte';
 
+import { curMailSubject, curMailDate, curMailHTML } from './../../store/email.js'
+
+import * as PostalMime from 'postal-mime'
+
+// var or let?
 
 const pkg = "https://main.irmaseal-pkg.ihub.ru.nl"
 var mod
@@ -186,6 +191,8 @@ async function doDecrypt() {
 
 
         console.log('decrypted file: ', outFile)
+        //emailView.displayMail(outFile)
+        displayMail(outFile)
         enableDownload = true
 }
 
@@ -202,6 +209,20 @@ function downloadFile() {
     a.click()
     URL.revokeObjectURL(url)
     a.remove()
+}
+
+
+async function displayMail(email) {
+    const parser = new PostalMime.default()
+    let preview = await parser.parse(email)
+
+    curMailSubject.set(preview.subject)
+    curMailDate.set(preview.date)
+    curMailHTML.set(preview.html)
+
+    var tag_id = document.getElementById('emailbody')
+    tag_id.style.isolation="isolate"
+    tag_id.innerHTML = $curMailHTML;    // is this safe?
 }
 
 </script>
@@ -253,6 +274,30 @@ allows user to see the credentials before they proceed with decryption  -->
 <button disabled={!enableSubmit} on:click={doDecrypt}>
 	Decrypt
 </button>
+
+<!-- {#if enableDownload}
+<EmailView bind:email={outFile} />
+{/if} -->
+
+
+{#if enableDownload}
+<h3>E-mail Preview</h3>
+
+{$curMailSubject} <br>
+{$curMailDate} <br>
+
+<div id="emailbody">
+    
+</div>
+
+<!-- <iframe 
+    id="emailbody"
+    title="emailbody">
+</iframe> -->
+
+
+{/if}
+
 
 <!-- download decrypted file -->
 <button disabled={!enableDownload} on:click={downloadFile}>

@@ -23,10 +23,17 @@ var timestamp
 
 var enableSubmit = false
 var showSelection = false
-let keySelection = '';
-var allkeys;
+let keySelection = ''
+var allkeys
 var showCreds = false
 var listOfKeys = []
+
+let outFile = "";
+const unsealerWritable = new WritableStream({
+write: (chunk) => {
+        outFile += new TextDecoder().decode(chunk);
+    },
+});
 
 
 // listen for file upload
@@ -46,10 +53,9 @@ async function loadModule() {
 const listener = async (event) => {
   const decrypt = event.srcElement.classList.contains("decrypt");
   [inFile] = event.srcElement.files;
-  const fileWritable = createWriteStream("postguard.eml");
+  //const fileWritable = createWriteStream("postguard.eml");
 
   const readable = inFile.stream();
-  writable = fileWritable;
 
     try {
         unsealer = await mod.Unsealer.new(readable);
@@ -170,12 +176,15 @@ async function doDecrypt() {
 
         const t0 = performance.now();
 
-        await unsealer.unseal(identifier, usk, writable);
+        await unsealer.unseal(identifier, usk, unsealerWritable);
         
         const tDecrypt = performance.now() - t0;
 
         console.log(`tDecrypt ${tDecrypt}$ ms`);
         console.log(`average MB/s: ${inFile.size / (1000 * tDecrypt)}`);
+
+
+        console.log('decrypted file: ', outFile)
 }
 
 </script>
@@ -219,7 +228,6 @@ System error: {someError.message}.
         {keys}<br>
     {/each}
 {/if}
-
 
 <!-- added submit button for UX reasons -->
 <button disabled={!enableSubmit} on:click={doDecrypt}>

@@ -22,6 +22,7 @@ var identifier
 var timestamp
 
 var enableSubmit = false
+var enableDownload = false
 var showSelection = false
 let keySelection = ''
 var allkeys
@@ -185,6 +186,22 @@ async function doDecrypt() {
 
 
         console.log('decrypted file: ', outFile)
+        enableDownload = true
+}
+
+// download email on button click
+function downloadFile() {
+    const downFile = new Blob([outFile], { type: "text/html"}) // not sure if text/html is correct....
+    let a = document.createElement("a"),
+        url = URL.createObjectURL(downFile)
+
+    a.href = url;
+    a.download = "postguard.eml"
+    document.body.appendChild(a)
+
+    a.click()
+    URL.revokeObjectURL(url)
+    a.remove()
 }
 
 </script>
@@ -193,6 +210,7 @@ async function doDecrypt() {
 <h2>Decrypt E-mail</h2>
 
 
+<!-- load wasm module -->
 {#await loadModule()}
 Loading decryption module...
 {:then x}
@@ -201,12 +219,12 @@ Retrieved public key
 System error: {someError.message}.
 {/await}
 
+<!-- encrypted file upload -->
 <input 
     type=file 
     id="decrypt"
 />
 
-<!-- this doesn't work if the variable isn't from this file?????-->
 <!-- show selection dropdown when there are multiple recipients-->
 {#if showSelection }
 	<p>show selection</p>
@@ -221,7 +239,7 @@ System error: {someError.message}.
     <p>selected value is {keySelection}</p>
 {/if}
 
-
+<!-- if there are credentials with a preview, show them -->
 {#if showCreds}
 <p>Your credentials:</p>
     {#each listOfKeys as keys}
@@ -229,7 +247,14 @@ System error: {someError.message}.
     {/each}
 {/if}
 
-<!-- added submit button for UX reasons -->
+<!-- submit button for UX reasons
+allows user to make and change their selection if there are multiple recipients
+allows user to see the credentials before they proceed with decryption  -->
 <button disabled={!enableSubmit} on:click={doDecrypt}>
 	Decrypt
+</button>
+
+<!-- download decrypted file -->
+<button disabled={!enableDownload} on:click={downloadFile}>
+	Download
 </button>

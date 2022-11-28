@@ -40,6 +40,7 @@
 		"@privacybydesign/irma-core": "^0.4.3",
 		"@privacybydesign/irma-css": "^0.4.3",
 		"@privacybydesign/irma-popup": "^0.4.3",
+		"postal-mime": "^1.0.13",
 		"web-streams-polyfill": "^3.2.1"
 	}
 }

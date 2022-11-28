@@ -9,36 +9,24 @@ import { createWriteStream } from "streamsaver";
 import { onMount } from 'svelte';
 
 
-const pkg = "https://main.irmaseal-pkg.ihub.ru.nl";
-var mod;
-var mpk;
+const pkg = "https://main.irmaseal-pkg.ihub.ru.nl"
+var mod
+var mpk
+var writable
+var unsealer
+var inFile
 
-var writable;
+var recip
+var keyRequest
+var identifier
+var timestamp
 
-var recip;
-
-let sel1 = '';
-
-var testbool = false;
-
-var showthis = false;
-var showcreds = false;
-var enableButton = false;
-var unsealer;
-var inFile;
-
- var keyRequest1
- var identifier1
- var timestamp1
- var showSelection = false
- var allkeys;
-
- var showCreds = false
- var thecredst = []
-
-var enableButton = false
-
-var recip1
+var enableSubmit = false
+var showSelection = false
+let keySelection = '';
+var allkeys;
+var showCreds = false
+var listOfKeys = []
 
 
 // listen for file upload
@@ -79,119 +67,58 @@ function handleRecipients(recip) {
     // check if there is one (1) recipient or multiple
     if (Object.keys(recip).length == 1) {
         console.log("one recipient")
-        oneRecipient(recip, 'esthrshi@gmail.com');
+        getRecipient(Object.keys(recip));
     } else {
         console.log("multiple recipients")
-        multRecipients(recip)
+        showSelection = true;
+        allkeys = Object.keys(recip)
     }
 }
 
-// in case there is only one recipient specified
-function oneRecipient(recip, id) {
-
-    //Object.keys(hidden)
-    let key = Object.keys(recip)  // get the key (email) of the recipient
+// set up recipient
+function getRecipient(key) {
+    listOfKeys = []
     console.log('key: ', key)
-    identifier1 = String(key)  // get the identifier, cast it to a string
-    timestamp1 = recip[identifier1].ts  // create timestamp
+    identifier = String(key)  // get the identifier, cast it to a string
+    timestamp = recip[identifier].ts  // create timestamp
 
     console.log("recip: ", recip)
 
-    let kr = recip  // set up key request
-    kr[key[0]]["con"]["0"]["v"] = identifier1  // put the email in the email value of the keyrequest
+    let kr = JSON.parse(JSON.stringify(recip))  // set up key request
+    kr[key]["con"]["0"]["v"] = identifier  // put the email in the email value of the keyrequest
 
     // remove value key from all non-email attributes
-    for (var i = 1; i < kr[key[0]]["con"].length; i++) {
+    for (var i = 1; i < kr[key]["con"].length; i++) {
 
         // check if there are attributes of the following type: mobile number, surf ID
         // display their preview to the user
         // ask leon if i need to pay attention to any other attributes
-        if(kr[key[0]]["con"][i]["t"] == "pbdf.sidn-pbdf.mobilenumber.mobilenumber") {
+        if(kr[key]["con"][i]["t"] == "pbdf.sidn-pbdf.mobilenumber.mobilenumber") {
             showCreds = true;
-            thecredst.push("Mobile number: " + kr[key[0]]["con"][i]["v"])
+            listOfKeys.push("Mobile number: " + recip[key]["con"][i]["v"])
         }
-        if(kr[key[0]]["con"][i]["t"] == "pbdf.pbdf.surfnet-2.id") {
+        if(kr[key]["con"][i]["t"] == "pbdf.pbdf.surfnet-2.id") {
             showCreds = true;
-            thecredst.push("Student ID: " + kr[key[0]]["con"][i]["v"])
+            listOfKeys.push("Student ID: " + recip[key]["con"][i]["v"])
         }
 
-        delete kr[key[0]]["con"][i]["v"];
+        delete kr[key]["con"][i]["v"];
     }
 
     // create key request
-    keyRequest1 = {
+    keyRequest = {
         con: 
-            kr[key[0]]["con"] // check this
+            kr[key]["con"]
     }
 
-    console.log("key request: ", keyRequest1)
-    enableButton = true;
+    console.log("key request: ", keyRequest)
+    enableSubmit = true;
 }
 
-// in case there are multiple recipients specified, ask user to identify themselves
-function multRecipients(recip) {
-    showSelection = true;
-    allkeys = Object.keys(recip)
-    console.log("all keys: ", allkeys)
-}
-
-
-// most of this is same as oneRecipient so better to merge them
-function bla(identifier) {
-    console.log("selected someone: ", identifier)
-    //console.log("typeof: ", typeof x)
-
-        //Object.keys(hidden)
-    //let key = Object.keys(recip)  // get the key (email) of the recipient
-    //console.log('key: ', key)
-    //identifier = String(key)  // get the identifier, cast it to a string
-    timestamp1 = recip1[identifier].ts  // create timestamp
-
-    console.log("recip: ", recip1)
-
-    //console.log()
-    let kr = recip1  // set up key request
-    kr[identifier]["con"]["0"]["v"] = identifier  // put the email in the email value of the keyrequest
-
-    // remove value key from all non-email attributes
-    for (var i = 1; i < kr[identifier]["con"].length; i++) {
-
-        // check if there are attributes of the following type: mobile number, surf ID
-        // display their preview to the user
-        // ask leon if i need to pay attention to any other attributes
-        if(kr[identifier]["con"][i]["t"] == "pbdf.sidn-pbdf.mobilenumber.mobilenumber" || 
-           kr[identifier]["con"][i]["t"] == "pbdf.pbdf.surfnet-2.id") {
-            console.log("t: ", kr[identifier]["con"][i]["t"])
-        }
-
-        delete kr[identifier]["con"][i]["v"];
-    }
-
-    // create key request
-    keyRequest1 = {
-        con: 
-            kr[identifier]["con"]
-    }
-
-    console.log("key request: ", keyRequest1)
-    console.log("multiple recipientssss")
-    enableButton = true;
-
-
-   // console.log("this rec: ", recip1[key])
-}
-
-// needs to be renamed
-// very messy
-async function testa() {
-    const keyRequest = keyRequest1
-        const identifier = identifier1
-        const timestamp = timestamp1
-
+// send out decryptio request to IRMA server
+async function doDecrypt() {
         console.log("timestamp: ", timestamp);
         // what is the timestamp for?
-
-        testbool = true;
 
         const session = {
         url: pkg,
@@ -251,16 +178,10 @@ async function testa() {
         console.log(`average MB/s: ${inFile.size / (1000 * tDecrypt)}`);
 }
 
-// rename function
-function bloop(sel1) {
-    enableButton = true;
-    bla(sel1)
-}
-
 </script>
 
 
-<h2>Decryption2</h2>
+<h2>Decrypt E-mail</h2>
 
 
 {#await loadModule()}
@@ -278,9 +199,9 @@ System error: {someError.message}.
 
 <!-- this doesn't work if the variable isn't from this file?????-->
 <!-- show selection dropdown when there are multiple recipients-->
-{#if showthis }
+{#if showSelection }
 	<p>show selection</p>
-    <select bind:value={sel1} on:change={() => bloop(sel1) }>
+    <select bind:value={keySelection} on:change={() => getRecipient(keySelection) }>
         {#each allkeys as key}
             <option value={key}>
                 {key}
@@ -288,19 +209,19 @@ System error: {someError.message}.
         {/each}
     </select>
 
-    <p>selected value is {sel1}</p>
+    <p>selected value is {keySelection}</p>
 {/if}
 
 
-{#if showcreds}
+{#if showCreds}
 <p>Your credentials:</p>
-    {#each thecredst as t}
-        {t}<br>
+    {#each listOfKeys as keys}
+        {keys}<br>
     {/each}
 {/if}
 
 
 <!-- added submit button for UX reasons -->
-<button disabled={!enableButton} on:click={testa}>
+<button disabled={!enableSubmit} on:click={doDecrypt}>
 	Decrypt
 </button>

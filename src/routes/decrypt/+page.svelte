@@ -177,8 +177,8 @@ async function doDecrypt() {
         irma.use(IrmaClient);
         irma.use(IrmaPopup);
 
-        const usk = await irma.start();
-        //const usk = "j1rZ6shxKcYB7sX0XYdQ802MNSLKo4qYgXYbE6Pb5m8mSYUxbZ4P1oasSocJp3MCGF8Wrnmc/oy4cRyGb+TBJfxULn0GHKhGLxXC5y5eFLU2wyAC3xxzYClmqk8jYVk4s13H4zFq16ZnZ98ChVZxxLefZY+ILcVjC9v6Ifw+Ohdl5ysI5jAidGPWrixcQEIcBDOgZZ2iBIqK1BRnfxOhWHVZicroyGpe8hbLFgS8e4lbg4j0Zj87Q3ZffnuNa7T5tnNbZJxnah7d8Nt672wumjdgSYOy9Dy2Sx7Zee6qDYnJWkP30nvUGne75JIzpXdFA320ZCZ1gcXDb4LsUZvRxeFYJYAwEtkow2Y6ubTLCjRRFGZy5rvq3NnfESNDwSkWjAja6eG8wRaAmCGzamlUljJl861KlNwKZNamx05EeS7vX2DfFYHpV3ErAlDZrrceF41jX+BNlFTEzZumlhmfOgP6gWFpQSRl56CpICgptsPXN9upEME49sU5js3f1ereijEGPyrHhuQvCGDt78wZEdICGAiuO1BwMHO8taUIkJOXM0d88uUnuV56GOCzqUs5FSIEas+CsRc3f4E/PnEPj4U+eUVCWX1aWKPz4OFcKAIlBXSw2mhoxzS8/1hixDI8pfpxoirgUSnC1J6A1IAtkB4+1qBfcTvfN+BxZEpQz6eoI3PhgImyZJhOe7h5/hEzFe1cc4GwmBbxfrE9A3AzOgM1dl0AE3bgwchKcGjWq93K6cSnxaCh/puf3/M5JnuC"
+        //const usk = await irma.start();
+        const usk = "j1rZ6shxKcYB7sX0XYdQ802MNSLKo4qYgXYbE6Pb5m8mSYUxbZ4P1oasSocJp3MCGF8Wrnmc/oy4cRyGb+TBJfxULn0GHKhGLxXC5y5eFLU2wyAC3xxzYClmqk8jYVk4s13H4zFq16ZnZ98ChVZxxLefZY+ILcVjC9v6Ifw+Ohdl5ysI5jAidGPWrixcQEIcBDOgZZ2iBIqK1BRnfxOhWHVZicroyGpe8hbLFgS8e4lbg4j0Zj87Q3ZffnuNa7T5tnNbZJxnah7d8Nt672wumjdgSYOy9Dy2Sx7Zee6qDYnJWkP30nvUGne75JIzpXdFA320ZCZ1gcXDb4LsUZvRxeFYJYAwEtkow2Y6ubTLCjRRFGZy5rvq3NnfESNDwSkWjAja6eG8wRaAmCGzamlUljJl861KlNwKZNamx05EeS7vX2DfFYHpV3ErAlDZrrceF41jX+BNlFTEzZumlhmfOgP6gWFpQSRl56CpICgptsPXN9upEME49sU5js3f1ereijEGPyrHhuQvCGDt78wZEdICGAiuO1BwMHO8taUIkJOXM0d88uUnuV56GOCzqUs5FSIEas+CsRc3f4E/PnEPj4U+eUVCWX1aWKPz4OFcKAIlBXSw2mhoxzS8/1hixDI8pfpxoirgUSnC1J6A1IAtkB4+1qBfcTvfN+BxZEpQz6eoI3PhgImyZJhOe7h5/hEzFe1cc4GwmBbxfrE9A3AzOgM1dl0AE3bgwchKcGjWq93K6cSnxaCh/puf3/M5JnuC"
         console.log("retrieved usk: ", usk);
 
         const t0 = performance.now();
@@ -236,10 +236,8 @@ async function displayMail(email) {
     //console.log("to: ", to)
 
     curMailSubject.set(preview.subject)
-    curMailDate.set(preview.date)
+    curMailDate.set(preview.headers[0]["value"])
     curMailHTML.set(preview.html)
-
-    console.log("attachments: ", preview.attachments)
 
     // needed: to, cc, bcc, text, html, date, subject, from.address, from.name, 
 
@@ -322,12 +320,12 @@ allows user to see the credentials before they proceed with decryption  -->
 <h3>E-mail Preview</h3>
 
 <b>Subject:</b> {$curMailSubject} <br>
-<b>Date:</b> {$curMailDate} <br>    <!-- need to parse this date -->
+<b>Date:</b> {$curMailDate} <br>    <!-- need to parse this date, convert to local timezone, or not? -->
 <b>From (Sender):</b> {fromName} &lt;{fromAddress}&gt; <br>
 <b>To Recipient(s): </b> 
 
-{#each to as { name, address } }
-	{name} &lt;{address}&gt;, 
+{#each to as { name, address }, i }
+	{name} &lt;{address}&gt;, <!-- only add , if there are more than 1 recipients-->
 {/each}
 
 <div id="emailbody">

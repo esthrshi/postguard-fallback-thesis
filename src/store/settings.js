@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store'
-import {browser} from '$app/environment'
+import { browser } from '$app/environment'
+
 
 export const boolCacheEmail = writable (
     browser && (JSON.parse(localStorage.getItem("boolCacheEmail") || "false" ) )

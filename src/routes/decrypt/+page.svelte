@@ -8,7 +8,7 @@ import "@privacybydesign/irma-css";
 import { createWriteStream } from "streamsaver";
 import { onMount } from 'svelte';
 
-import { curMailSubject, curMailDate, curMailHTML } from './../../store/email.js'
+import { curMail, curMailSubject, curMailDate, curMailHTML, emails } from './../../store/email.js'
 
 import * as PostalMime from 'postal-mime'
 
@@ -155,11 +155,17 @@ async function doDecrypt() {
             return r
                 .text()
                 .then((jwt) =>
-                fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
+                {
+                    console.log("JWT: ", jwt);
+                    // only need to do fetch request when keyrequest is same
+                    return fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
                     headers: {
                     Authorization: `Bearer ${jwt}`,
                     },
                 })
+                
+                }
+                
                 )
                 .then((r) => r.json())
                 .then((json) => {
@@ -177,8 +183,8 @@ async function doDecrypt() {
         irma.use(IrmaClient);
         irma.use(IrmaPopup);
 
-        //const usk = await irma.start();
-        const usk = "j1rZ6shxKcYB7sX0XYdQ802MNSLKo4qYgXYbE6Pb5m8mSYUxbZ4P1oasSocJp3MCGF8Wrnmc/oy4cRyGb+TBJfxULn0GHKhGLxXC5y5eFLU2wyAC3xxzYClmqk8jYVk4s13H4zFq16ZnZ98ChVZxxLefZY+ILcVjC9v6Ifw+Ohdl5ysI5jAidGPWrixcQEIcBDOgZZ2iBIqK1BRnfxOhWHVZicroyGpe8hbLFgS8e4lbg4j0Zj87Q3ZffnuNa7T5tnNbZJxnah7d8Nt672wumjdgSYOy9Dy2Sx7Zee6qDYnJWkP30nvUGne75JIzpXdFA320ZCZ1gcXDb4LsUZvRxeFYJYAwEtkow2Y6ubTLCjRRFGZy5rvq3NnfESNDwSkWjAja6eG8wRaAmCGzamlUljJl861KlNwKZNamx05EeS7vX2DfFYHpV3ErAlDZrrceF41jX+BNlFTEzZumlhmfOgP6gWFpQSRl56CpICgptsPXN9upEME49sU5js3f1ereijEGPyrHhuQvCGDt78wZEdICGAiuO1BwMHO8taUIkJOXM0d88uUnuV56GOCzqUs5FSIEas+CsRc3f4E/PnEPj4U+eUVCWX1aWKPz4OFcKAIlBXSw2mhoxzS8/1hixDI8pfpxoirgUSnC1J6A1IAtkB4+1qBfcTvfN+BxZEpQz6eoI3PhgImyZJhOe7h5/hEzFe1cc4GwmBbxfrE9A3AzOgM1dl0AE3bgwchKcGjWq93K6cSnxaCh/puf3/M5JnuC"
+        const usk = await irma.start();
+        //const usk = "j1rZ6shxKcYB7sX0XYdQ802MNSLKo4qYgXYbE6Pb5m8mSYUxbZ4P1oasSocJp3MCGF8Wrnmc/oy4cRyGb+TBJfxULn0GHKhGLxXC5y5eFLU2wyAC3xxzYClmqk8jYVk4s13H4zFq16ZnZ98ChVZxxLefZY+ILcVjC9v6Ifw+Ohdl5ysI5jAidGPWrixcQEIcBDOgZZ2iBIqK1BRnfxOhWHVZicroyGpe8hbLFgS8e4lbg4j0Zj87Q3ZffnuNa7T5tnNbZJxnah7d8Nt672wumjdgSYOy9Dy2Sx7Zee6qDYnJWkP30nvUGne75JIzpXdFA320ZCZ1gcXDb4LsUZvRxeFYJYAwEtkow2Y6ubTLCjRRFGZy5rvq3NnfESNDwSkWjAja6eG8wRaAmCGzamlUljJl861KlNwKZNamx05EeS7vX2DfFYHpV3ErAlDZrrceF41jX+BNlFTEzZumlhmfOgP6gWFpQSRl56CpICgptsPXN9upEME49sU5js3f1ereijEGPyrHhuQvCGDt78wZEdICGAiuO1BwMHO8taUIkJOXM0d88uUnuV56GOCzqUs5FSIEas+CsRc3f4E/PnEPj4U+eUVCWX1aWKPz4OFcKAIlBXSw2mhoxzS8/1hixDI8pfpxoirgUSnC1J6A1IAtkB4+1qBfcTvfN+BxZEpQz6eoI3PhgImyZJhOe7h5/hEzFe1cc4GwmBbxfrE9A3AzOgM1dl0AE3bgwchKcGjWq93K6cSnxaCh/puf3/M5JnuC"
         console.log("retrieved usk: ", usk);
 
         const t0 = performance.now();
@@ -223,42 +229,30 @@ let to = []
 async function displayMail(email) {
     const parser = new PostalMime.default()
     preview = await parser.parse(email)
+    curMail.set(preview)
     fromName = preview.from.name
     fromAddress = preview.from.address
 
-    console.log("from: ", preview.from)
+    console.log("curMail: ", $curMail)
 
     to = preview.to
-
-    // toName = preview.to.name
-    // toAddress = preview.to.address
-
-    //console.log("to: ", to)
 
     curMailSubject.set(preview.subject)
     curMailDate.set(preview.headers[0]["value"])
     curMailHTML.set(preview.html)
 
-    // needed: to, cc, bcc, text, html, date, subject, from.address, from.name, 
+}
 
-// attachments is an array that includes message attachments
-// attachment[].filename is the file name if provided
-// attachment[].mimeType is the MIME type of the attachment
-// attachment[].disposition is either "attachment", "inline" or null if disposition was not provided
-// attachment[].related is a boolean value that indicats if this attachment should be treated as embedded image
-// attachment[].contentId is the ID from Content-ID header
-// attachment[].content is an ArrayBuffer that contains the attachment file
+function saveMail() {
 
-
-    // messageId, inReplyTo, references 
-
-//     to, cc, bcc includes an array of processed objects for the corresponding headers
-// to[].name is decoded name (empty string if not set)
-// to[].address is the email address
-
-    var tag_id = document.getElementById('emailbody')
-    tag_id.style.isolation="isolate"
-    tag_id.innerHTML = $curMailHTML;    // is this safe?
+    // prepend email to list of emails
+    $emails = [
+                {
+                    user_name:"blabla", 
+                    user_id:"4"
+                },
+                ...$emails,]
+    
 }
 
 </script>
@@ -324,18 +318,11 @@ allows user to see the credentials before they proceed with decryption  -->
 <b>From (Sender):</b> {fromName} &lt;{fromAddress}&gt; <br>
 <b>To Recipient(s): </b> 
 
-{#each to as { name, address }, i }
+{#each to as { name, address } }
 	{name} &lt;{address}&gt;, <!-- only add , if there are more than 1 recipients-->
 {/each}
 
-<div id="emailbody">
-    
-</div>
-
-<!-- <iframe 
-    id="emailbody"
-    title="emailbody">
-</iframe> -->
+{@html $curMailHTML} <!-- not properly escaped -->
 
 
 {/if}
@@ -345,3 +332,16 @@ allows user to see the credentials before they proceed with decryption  -->
 <button disabled={!enableDownload} on:click={downloadFile}>
 	Download
 </button>
+
+
+<!-- email view (prototype -->
+
+<button on:click={saveMail}>
+	test mail
+</button>
+
+<ol>
+    {#each $emails as user}
+        <li>{user.user_id} - {user.user_name}</li>
+    {/each}
+</ol>

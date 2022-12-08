@@ -1,6 +1,10 @@
 <script>
 import { emails } from './../../store/email.js'
 import * as PostalMime from 'postal-mime'
+	import { browser } from '$app/environment';
+//import moment from 'moment'
+
+let showBody = false
 
 function test() {
     //console.log("id: ", $emails[0].id)
@@ -14,7 +18,6 @@ function test() {
     //someArray = someArray.filter(person => person.name != 'John');
 }
 
-let showBody = false
 let from, to, subject, date, body
 let currentEmail, currentID
 
@@ -33,6 +36,7 @@ async function showMail(id, email) {
 
 function deleteMail() {
     $emails = $emails.filter(x => x.id != currentID)
+    showBody = false
 }
 
 function deleteAll() {
@@ -58,57 +62,77 @@ function downloadAll() {
     
 }
 
-
-
 </script>
+
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 <h2>E-mail History</h2>
 
-<button on:click={test}>
+<!-- <button on:click={test}>
 	test
-</button><br>
+</button><br> -->
 
 <div id="client">
 
 <div id="sidebar">
+
     {#each $emails as email}
         <div id="sb-th" tabindex="-1" on:click|preventDefault={() => showMail(email.id, email.raw)} on:keypress >
-        From: {email.from.name} {email.from.address} <br>
-        To: 
-            {#each email.to as { name, address } }
-            {name} &lt;{address}&gt;,
-            {/each}
-        <br>
-        Date: {email.date} <br>
-        Subject: {email.subject} <br><br>
+
+            <b>{email.subject}</b> <br>
+            {#if email.from.name}
+                {email.from.name}
+            {:else}
+                {email.from.address}
+            {/if} <br>
+
+            {email.date}
         </div>
     {/each}
     </div>
 
     <div id="content"> <!-- make component of this?-->
-        <h2>Email Body</h2>
+
+        {#if !$emails[0]}
+        <div id='noemails'>
+            <span class="material-icons">mail</span><br>
+            There are no emails here.<br>
+            Want to save your decrypted emails? Head over to <a href="/settings">settings</a> to have your emails stored in your browser.
+        </div>
+        {/if}
 
         {#if showBody}
 
-        <button on:click={downloadMail}>
-            Download
-        </button>
-        <button on:click={deleteMail}>
-            Delete
-        </button>
-        <br>
-            From: {from.name} &lt;{from.address}&gt;<br>
-            To: 
+        <div id='header'>
+            <div id='title'>
+                {subject}
+            </div>
+
+            <div id='buttons'>
+                <button on:click={downloadMail}>
+                    <span class="material-icons">download</span>
+                </button>
+                <button on:click={deleteMail}>
+                    <span class="material-icons">delete</span>
+                </button>
+            </div>
+        </div>
+
+        <div id='content-body'>
+
+            <b>From:</b> {from.name} &lt;{from.address}&gt;<br>
+            <b>To:</b> 
                 {#each to as {name, address} }
                 {name} &lt;{address}&gt;,
                 {/each}
             <br>
-            Date: {date}<br>
-            Subject: {subject}<br><br>
+            <b>Date:</b> {date}<br>
 
-            Body:<br>
             {@html body}
+
+        </div>
         {/if}
+        
     </div>
 </div>
 
@@ -117,29 +141,61 @@ function downloadAll() {
 
 #client {
     display: flex;
-    border: 1px solid;
+    border: 1px dashed;
+    border-radius: 10px;
+    overflow: hidden;
+    width: 100%;
+    min-width: 800px;
+    height: 600px;
 }
 
 #sidebar {
     overflow: scroll;
+    /* background-color: rgb(59, 131, 195); */
+    border-right: 1px solid;
+    width: 17em;
 }
 
 #sb-th {
-    border-bottom: 1px solid;
-    border-right: 1px solid;
+    padding: 3px;
+    border-bottom: 1px solid rgb(173, 173, 173);
     cursor: pointer;
+    padding: 5px;
 }
 
 #sb-th:hover {
-    background: rgb(219, 219, 219); 
+    background: rgb(236, 236, 236); 
 }
 
 #sb-th:focus {  /** focus doesn't work */
-    background: rgb(184, 184, 184);    
+    background: rgb(212, 212, 212);    
 }
 
 #content {
-    overflow: scroll;
+    overflow: auto;
+    /* background-color: rgb(193, 59, 195); */
+    width: 100%;
+    padding: 10px;
+}
+
+#header {
+    display: flex;
+}
+
+#title {
+    width: 100%;
+    font-size: 20px;
+}
+
+#buttons {
+    min-width: 6em;
+    /* background-color: rgb(59, 131, 195); */
+}
+
+#noemails {
+    padding-left: 20px;
+    padding-top: 100px;
+    padding-right: 20px;
 }
 
 </style>

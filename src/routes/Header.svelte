@@ -25,3 +25,39 @@
     </nav>
 
 </header>
+
+
+<style>
+
+nav {
+	margin-left:-2.5em;  /* why is this necessary? */
+}
+
+ul {
+	list-style-type: none;
+	overflow: hidden;
+}
+
+li {
+	float: left;
+}
+
+li a {
+	display: block;
+	text-align: center;
+	margin-top: 16px;
+	padding-right: 16px;
+	margin-bottom: 16px;
+	color: #022e3d;
+	text-decoration: none;
+}
+
+li a:hover {
+	text-decoration: underline #3095de 3px;
+}
+
+[aria-current]:not([aria-current="false"]) {
+	text-decoration: underline #3095de 3px;   /* why doesn't the color here work? */
+}
+
+</style>

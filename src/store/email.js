@@ -8,14 +8,14 @@ export const curMailHTML = writable ('')
 
 
 const storeEmails = [
-  {
-    id: 0,
-    from: '',
-    to: '',
-    date: '',
-    subject: '',
-    raw: ''
-  }
+  // {
+  //   id: 0,
+  //   from: '',
+  //   to: '',
+  //   date: '',
+  //   subject: '',
+  //   raw: ''
+  // }
 ]
 
 export const emails = writable (

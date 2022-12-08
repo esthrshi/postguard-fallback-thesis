@@ -11,6 +11,7 @@ import { onMount } from 'svelte';
 import { curMail, curMailSubject, curMailDate, curMailHTML, emails } from './../../store/email.js'
 
 import * as PostalMime from 'postal-mime'
+import jwt_decode from "jwt-decode"
 
 // var or let?
 
@@ -40,6 +41,8 @@ write: (chunk) => {
         outFile += new TextDecoder().decode(chunk);
     },
 });
+
+let jwtCache
 
 
 // listen for file upload
@@ -156,7 +159,10 @@ async function doDecrypt() {
                 .text()
                 .then((jwt) =>
                 {
-                    console.log("JWT: ", jwt);
+                    console.log("JWT: ", jwt)
+                    jwtCache = jwt
+                    var decoded = jwt_decode(jwtCache)
+                    console.log("jwt decoded: ", decoded)
                     // only need to do fetch request when keyrequest is same
                     return fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
                     headers: {
@@ -176,12 +182,33 @@ async function doDecrypt() {
                 .catch((e) => console.log("error: ", e));
             },
         },
-        };
+        }
 
         const irma = new IrmaCore({ debugging: true, session });
 
         irma.use(IrmaClient);
         irma.use(IrmaPopup);
+
+
+        // jwtCache = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NzA1Mjc2NTcsImlhdCI6MTY3MDUyNzM1NywiaXNzIjoiaXJtYXNlcnZlciIsInN1YiI6ImRpc2Nsb3NpbmdfcmVzdWx0IiwidG9rZW4iOiIxb0hjd2h4M2NmZUdORHlmc3VDSyIsInN0YXR1cyI6IkRPTkUiLCJ0eXBlIjoiZGlzY2xvc2luZyIsInByb29mU3RhdHVzIjoiVkFMSUQiLCJkaXNjbG9zZWQiOltbeyJyYXd2YWx1ZSI6ImVzdGhyc2hpQGdtYWlsLmNvbSIsInZhbHVlIjp7IiI6ImVzdGhyc2hpQGdtYWlsLmNvbSIsImVuIjoiZXN0aHJzaGlAZ21haWwuY29tIiwibmwiOiJlc3RocnNoaUBnbWFpbC5jb20ifSwiaWQiOiJwYmRmLnNpZG4tcGJkZi5lbWFpbC5lbWFpbCIsInN0YXR1cyI6IlBSRVNFTlQiLCJpc3N1YW5jZXRpbWUiOjE2NjgwMzg0MDB9XV19.mIIYPEdhev2pKrNuGBERBio0V25OomCHXfTx5gqbzluwkDsXcWyfHDDTO6I_P1VJ0cMzoxe7YI0GQW4EdiqxEhmkICAj27kVwT8lFf9T3wgGOKo823_3gLvQEv-z2bJg4FUCyaV0kN5jNgIX5z4p5OMNn_0HAvTrl53y6bjYjvtLnO9F-RKjNZpzjDVh4jbPY5CZ-jqRHGJP90a62JxKQrr_zoO2dGOOJdf2fjLBwly3P7rkCw7oULLVlIEDdG1N3PqJkDT3rCIBe4ORmq9mzrtQB-JY_vpvYPfiAG0YbwqH_C6eq6QEuclYPeL65vIFOe9PjD5t5dgPZZ04gCDHXA'
+
+        // var decoded = jwt_decode(jwtCache)
+        // console.log("jwt decoded: ", decoded)
+
+        // let usk
+
+        // usk = fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
+        //             headers: {
+        //             Authorization: `Bearer ${jwtCache}`,
+        //             },
+        //         })
+        //         .catch(e => {
+        //                 console.log(e);
+        //                 return e;
+        //         });
+
+        // console.log("usk: ", usk)
+
 
         const usk = await irma.start();
         //const usk = "j1rZ6shxKcYB7sX0XYdQ802MNSLKo4qYgXYbE6Pb5m8mSYUxbZ4P1oasSocJp3MCGF8Wrnmc/oy4cRyGb+TBJfxULn0GHKhGLxXC5y5eFLU2wyAC3xxzYClmqk8jYVk4s13H4zFq16ZnZ98ChVZxxLefZY+ILcVjC9v6Ifw+Ohdl5ysI5jAidGPWrixcQEIcBDOgZZ2iBIqK1BRnfxOhWHVZicroyGpe8hbLFgS8e4lbg4j0Zj87Q3ZffnuNa7T5tnNbZJxnah7d8Nt672wumjdgSYOy9Dy2Sx7Zee6qDYnJWkP30nvUGne75JIzpXdFA320ZCZ1gcXDb4LsUZvRxeFYJYAwEtkow2Y6ubTLCjRRFGZy5rvq3NnfESNDwSkWjAja6eG8wRaAmCGzamlUljJl861KlNwKZNamx05EeS7vX2DfFYHpV3ErAlDZrrceF41jX+BNlFTEzZumlhmfOgP6gWFpQSRl56CpICgptsPXN9upEME49sU5js3f1ereijEGPyrHhuQvCGDt78wZEdICGAiuO1BwMHO8taUIkJOXM0d88uUnuV56GOCzqUs5FSIEas+CsRc3f4E/PnEPj4U+eUVCWX1aWKPz4OFcKAIlBXSw2mhoxzS8/1hixDI8pfpxoirgUSnC1J6A1IAtkB4+1qBfcTvfN+BxZEpQz6eoI3PhgImyZJhOe7h5/hEzFe1cc4GwmBbxfrE9A3AzOgM1dl0AE3bgwchKcGjWq93K6cSnxaCh/puf3/M5JnuC"
@@ -241,9 +268,18 @@ async function displayMail(email) {
     curMailDate.set(preview.headers[0]["value"])
     curMailHTML.set(preview.html)
 
+    let currentID
+    if ($emails[0]) {
+        console.log("not empty")
+        currentID = $emails[0].id+1
+    } else {
+        console.log("empty")
+        currentID = 0
+    }
+
     $emails = [
                 {
-                    id: $emails[0].id+1,
+                    id: currentID,
                     from: preview.from,
                     to: preview.to,
                     date: preview.headers[0]["value"],
@@ -252,9 +288,6 @@ async function displayMail(email) {
                 },
                 ...$emails,
     ]
-
-
-
 }
 
 </script>
@@ -265,22 +298,27 @@ async function displayMail(email) {
 
 <!-- load wasm module -->
 {#await loadModule()}
-Loading decryption module...
-{:then x}
-Retrieved public key
+Loading...
+
 {:catch someError}
 System error: {someError.message}.
 {/await}
 
+<p>Download the "postguard.encrypted" file that is attached to the encrypted email you received. Next, add the file here.</p>
+
 <!-- encrypted file upload -->
+<div id='block'>
 <input 
     type=file 
     id="decrypt"
+    class="button"
 />
+</div>
 
 <!-- show selection dropdown when there are multiple recipients-->
+<div id='block'>
 {#if showSelection }
-	<p>show selection</p>
+	<p><b>Please select which email belongs to you:</b></p>
     <select bind:value={keySelection} on:change={() => getRecipient(keySelection) }>
         {#each allkeys as key}
             <option value={key}>
@@ -289,23 +327,28 @@ System error: {someError.message}.
         {/each}
     </select>
 
-    <p>selected value is {keySelection}</p>
+    <p>You selected {keySelection}</p>
 {/if}
+</div>
 
 <!-- if there are credentials with a preview, show them -->
+<div id='block'>
 {#if showCreds}
-<p>Your credentials:</p>
+<b>Your credentials:</b><br>
     {#each listOfKeys as keys}
         {keys}<br>
     {/each}
 {/if}
+</div>
 
 <!-- submit button for UX reasons
 allows user to make and change their selection if there are multiple recipients
 allows user to see the credentials before they proceed with decryption  -->
-<button disabled={!enableSubmit} on:click={doDecrypt}>
+<div id='block'>
+<button class="button" disabled={!enableSubmit} on:click={doDecrypt}>
 	Decrypt
 </button>
+</div>
 
 <!-- {#if enableDownload}
 <EmailView bind:email={outFile} />
@@ -331,9 +374,30 @@ allows user to see the credentials before they proceed with decryption  -->
 
 
 <!-- download decrypted file -->
-<button disabled={!enableDownload} on:click={downloadFile}>
+<div id='block'>
+<button class="button" disabled={!enableDownload} on:click={downloadFile}>
 	Download
 </button>
+</div>
 
 
 <!-- email view (prototype -->
+
+
+<style>
+
+#block {
+    margin-bottom: 20px;
+}
+
+button, input {
+	font-family: 'Overpass', Arial, Helvetica, sans-serif;
+}
+
+select {
+    padding: 5px;
+    border: 1px solid #d6d6d6;
+    border-radius: 5px;
+}
+
+</style>

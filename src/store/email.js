@@ -9,18 +9,12 @@ export const curMailHTML = writable ('')
 
 const storeEmails = [
   {
-    user_name: "educative 1",
-    user_id: "123"
-  },
-
-  {
-    user_name: "educative 2",
-    user_id: "1234"
-  },
-
-  {
-    user_name: "educative 3",
-    user_id: "12345"
+    id: 0,
+    from: '',
+    to: '',
+    date: '',
+    subject: '',
+    raw: ''
   }
 ]
 

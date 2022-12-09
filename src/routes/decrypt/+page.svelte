@@ -9,6 +9,7 @@ import { createWriteStream } from "streamsaver";
 import { onMount } from 'svelte';
 
 import { curMail, curMailSubject, curMailDate, curMailHTML, emails } from './../../store/email.js'
+import { boolCacheEmail, boolCacheIRMA } from './../../store/settings.js'
 
 import * as PostalMime from 'postal-mime'
 import jwt_decode from "jwt-decode"
@@ -268,26 +269,39 @@ async function displayMail(email) {
     curMailDate.set(preview.headers[0]["value"])
     curMailHTML.set(preview.html)
 
-    let currentID
-    if ($emails[0]) {
-        console.log("not empty")
-        currentID = $emails[0].id+1
-    } else {
-        console.log("empty")
-        currentID = 0
-    }
+    var iframe = document.createElement('iframe');
+    var html = preview.html
+    iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+    iframe.width="800px";
+    iframe.height="500px";
+    document.getElementById("html-display").appendChild(iframe);
+    console.log('iframe.contentWindow =', iframe.contentWindow);
 
-    $emails = [
-                {
-                    id: currentID,
-                    from: preview.from,
-                    to: preview.to,
-                    date: preview.headers[0]["value"],
-                    subject: preview.subject, 
-                    raw: email
-                },
-                ...$emails,
-    ]
+
+    // only cache email if option is checked
+    if ($boolCacheEmail) {
+        let currentID
+        if ($emails[0]) {
+            console.log("not empty")
+            currentID = $emails[0].id+1
+        } else {
+            console.log("empty")
+            currentID = 0
+        }
+
+        $emails = [
+                    {
+                        id: currentID,
+                        from: preview.from,
+                        to: preview.to,
+                        date: preview.headers[0]["value"],
+                        subject: preview.subject, 
+                        raw: email
+                    },
+                    ...$emails,
+        ]
+    }
+    
 }
 
 </script>
@@ -367,7 +381,22 @@ allows user to see the credentials before they proceed with decryption  -->
 	{name} &lt;{address}&gt;, <!-- only add , if there are more than 1 recipients-->
 {/each}
 
-{@html $curMailHTML} <!-- not properly escaped -->
+ <!--{@html $curMailHTML} not properly escaped -->
+
+ <div id="html-display">
+
+ </div>
+
+<div id="html-container">
+    <div class="container-label">HTML</div>
+    <div id="html-content"></div>
+    <div><small><em>Images not shown? Mixed content is not allowed, so check that image links are not HTTP if this page is HTTPS.</em></small></div>
+</div>
+
+<div id="attachments-container">
+            <div class="container-label">Attachments</div>
+            <div class="content"></div>
+</div>
 
 
 {/if}
@@ -385,14 +414,6 @@ allows user to see the credentials before they proceed with decryption  -->
 
 
 <style>
-
-#block {
-    margin-bottom: 20px;
-}
-
-button, input {
-	font-family: 'Overpass', Arial, Helvetica, sans-serif;
-}
 
 select {
     padding: 5px;

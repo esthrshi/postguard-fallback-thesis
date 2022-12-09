@@ -20,8 +20,12 @@ function test() {
 
 let from, to, subject, date, body
 let currentEmail, currentID
+var iframe 
+let boolShown = false
 
 async function showMail(id, email) {
+
+    iframe = ''
     currentEmail = email
     currentID = id
     const parser = new PostalMime.default()
@@ -31,12 +35,33 @@ async function showMail(id, email) {
     date = preview.headers[0]["value"]
     subject = preview.subject
     body = preview.html
+
     showBody = true
+
+    iframe = document.createElement('iframe');
+    var html = preview.html
+    iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+    iframe.width="100%";
+    iframe.height="100%";
+
+    // why no work!?!??!
+    if (boolShown) {
+        document.getElementById("html-display").replaceWith(iframe);
+    } else {
+        document.getElementById("html-display").appendChild(iframe);
+    }
+
+    //document.getElementById("html-display").appendChild(iframe);
+    console.log('iframe.contentWindow =', iframe.contentWindow);
+
+    boolShown = true
+
 }
 
 function deleteMail() {
     $emails = $emails.filter(x => x.id != currentID)
     showBody = false
+    iframe = ''
 }
 
 function deleteAll() {
@@ -128,7 +153,9 @@ function downloadAll() {
             <br>
             <b>Date:</b> {date}<br>
 
-            {@html body}
+            <div id="html-display">
+
+            </div>
 
         </div>
         {/if}
@@ -153,7 +180,7 @@ function downloadAll() {
     overflow: scroll;
     /* background-color: rgb(59, 131, 195); */
     border-right: 1px solid;
-    width: 17em;
+    width: 20em;
 }
 
 #sb-th {
@@ -176,6 +203,11 @@ function downloadAll() {
     /* background-color: rgb(193, 59, 195); */
     width: 100%;
     padding: 10px;
+}
+
+#html-display {
+    display: flex;
+    height: 480px;
 }
 
 #header {

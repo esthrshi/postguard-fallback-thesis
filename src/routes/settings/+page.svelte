@@ -2,6 +2,7 @@
 
 import { boolCacheEmail, boolCacheIRMA } from './../../store/settings.js'
 import { emails } from './../../store/email.js'
+import { krCache } from './../../store/jwt.js'
 
 function deleteAllMails() {
   if (confirm('Are you sure you want to delete all emails? This action is permanent!')) {
@@ -17,6 +18,7 @@ function deleteAllMails() {
 function deleteAllIRMA() {
   if (confirm('Are you sure you want to delete all IRMA credentials? This action is permanent!')) {
     // Save it!
+    $krCache = []
     console.log('All IRMA credentials deleted');
   } else {
     // Do nothing!

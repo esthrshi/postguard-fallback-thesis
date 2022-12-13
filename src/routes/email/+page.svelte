@@ -20,12 +20,8 @@ function test() {
 
 let from, to, subject, date, body
 let currentEmail, currentID
-var iframe 
-let boolShown = false
 
 async function showMail(id, email) {
-
-    iframe = ''
     currentEmail = email
     currentID = id
     const parser = new PostalMime.default()
@@ -35,33 +31,12 @@ async function showMail(id, email) {
     date = preview.headers[0]["value"]
     subject = preview.subject
     body = preview.html
-
     showBody = true
-
-    iframe = document.createElement('iframe');
-    var html = preview.html
-    iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
-    iframe.width="100%";
-    iframe.height="100%";
-
-    // why no work!?!??!
-    if (boolShown) {
-        document.getElementById("html-display").replaceWith(iframe);
-    } else {
-        document.getElementById("html-display").appendChild(iframe);
-    }
-
-    //document.getElementById("html-display").appendChild(iframe);
-    console.log('iframe.contentWindow =', iframe.contentWindow);
-
-    boolShown = true
-
 }
 
 function deleteMail() {
     $emails = $emails.filter(x => x.id != currentID)
     showBody = false
-    iframe = ''
 }
 
 function deleteAll() {
@@ -128,36 +103,34 @@ function downloadAll() {
 
         {#if showBody}
 
-        <div id='header'>
-            <div id='title'>
-                {subject}
+            <div id='header'>
+                <div id='title'>
+                    {subject}
+                </div>
+
+                <div id='buttons'>
+                    <button on:click={downloadMail}>
+                        <span class="material-icons">download</span>
+                    </button>
+                    <button on:click={deleteMail}>
+                        <span class="material-icons">delete</span>
+                    </button>
+                </div>
             </div>
 
-            <div id='buttons'>
-                <button on:click={downloadMail}>
-                    <span class="material-icons">download</span>
-                </button>
-                <button on:click={deleteMail}>
-                    <span class="material-icons">delete</span>
-                </button>
-            </div>
-        </div>
+            <div id='content-body'>
 
-        <div id='content-body'>
+                <b>From:</b> {from.name} &lt;{from.address}&gt;<br>
+                <b>To:</b> 
+                    {#each to as {name, address} }
+                    {name} &lt;{address}&gt;,
+                    {/each}
+                <br>
+                <b>Date:</b> {date}<br>
 
-            <b>From:</b> {from.name} &lt;{from.address}&gt;<br>
-            <b>To:</b> 
-                {#each to as {name, address} }
-                {name} &lt;{address}&gt;,
-                {/each}
-            <br>
-            <b>Date:</b> {date}<br>
-
-            <div id="html-display">
+                {@html body}
 
             </div>
-
-        </div>
         {/if}
         
     </div>

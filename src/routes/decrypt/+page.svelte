@@ -10,6 +10,7 @@ import { onMount } from 'svelte';
 
 import { curMail, curMailSubject, curMailDate, curMailHTML, emails } from './../../store/email.js'
 import { boolCacheEmail, boolCacheIRMA } from './../../store/settings.js'
+import { krCache } from './../../store/jwt.js'
 
 import * as PostalMime from 'postal-mime'
 import jwt_decode from "jwt-decode"
@@ -43,6 +44,7 @@ write: (chunk) => {
     },
 });
 
+let krCacheSorted
 let jwtCache
 
 
@@ -91,6 +93,13 @@ function handleRecipients(recip) {
     }
 }
 
+let krCacheTemp =
+  {
+    jwt: null,
+    key: null,
+    krCon: {}
+  }
+
 // set up recipient
 function getRecipient(key) {
     listOfKeys = []
@@ -101,6 +110,15 @@ function getRecipient(key) {
     console.log("recip: ", recip)
 
     let kr = JSON.parse(JSON.stringify(recip))  // set up key request
+
+    console.log("sort kr")
+    let test1 = hashCon(recip[key]["con"])
+    console.log("sorted kr: ", test1)
+    krCacheTemp.krCon = test1
+    krCacheTemp.key = key
+
+
+
     kr[key]["con"]["0"]["v"] = identifier  // put the email in the email value of the keyrequest
 
     // remove value key from all non-email attributes
@@ -118,22 +136,76 @@ function getRecipient(key) {
             listOfKeys.push("Student ID: " + recip[key]["con"][i]["v"])
         }
 
+        // switch (kr[key]["con"][i]["t"]) {
+        //     case 'pbdf.sidn-pbdf.email.email':
+        //         krCacheTemp.krSorted.email = identifier
+        //         break;
+        //     case 'pbdf.sidn-pbdf.mobilenumber.mobilenumber':
+        //         krCacheTemp['krSorted']['mobilenumber'] = recip[key]["con"][i]["v"]
+        //         showCreds = true;
+        //         listOfKeys.push("Mobile number: " + recip[key]["con"][i]["v"])
+        //         break;
+        //     case 'pbdf.gemeente.personalData.surname':
+        //         krCacheTemp['krSorted']['surname'] = recip[key]["con"][i]["v"]
+        //         break;
+        //     case 'pbdf.gemeente.personalData.dateofbirth':
+        //         krCacheTemp['krSorted']['dateofbirth'] = recip[key]["con"][i]["v"]
+        //         break;
+        //     case 'pbdf.pbdf.surfnet-2.id':
+        //         krCacheTemp['krSorted']['studentid'] = recip[key]["con"][i]["v"]
+        //         showCreds = true;
+        //         listOfKeys.push("Student ID: " + recip[key]["con"][i]["v"])
+        //         break;
+        //     case 'pbdf.nuts.agb.agbcode':
+        //         krCacheTemp['krSorted']['agb'] = recip[key]["con"][i]["v"]
+        //         break;
+        // }
+
         delete kr[key]["con"][i]["v"];
     }
 
     // create key request
     keyRequest = {
         con: 
-            kr[key]["con"]
+            kr[key]["con"],
+        validity: secondsTill4AM()
     }
+    //krCacheTemp.krStripped = keyRequest
 
     console.log("key request: ", keyRequest)
     enableSubmit = true;
 }
 
+function secondsTill4AM() {
+    const now = Date.now()
+    const nextMidnight = new Date(now).setHours(24, 0, 0, 0)
+    const secondsTillMidnight = Math.round((nextMidnight - now) / 1000)
+    const secondsTill4AM = secondsTillMidnight + 4 * 60 * 60
+    return secondsTill4AM % (24 * 60 * 60)
+}
+
+function getCachedRecipient() {
+
+}
+
+function checkJWT() {
+
+}
+
+function hashCon(con) {
+    const sorted = con.sort(
+        (att1, att2) =>
+            att1.t.localeCompare(att2.t) || att1.v.localeCompare(att2.v)
+    )
+    return sorted
+}
+
 // send out decryptio request to IRMA server
 async function doDecrypt() {
-        console.log("timestamp: ", timestamp);
+
+        //check if there already exists a JWT for this specific combination of creds
+        //checkJWT()
+        // console.log("timestamp: ", timestamp);
         // what is the timestamp for?
 
         const session = {
@@ -160,14 +232,14 @@ async function doDecrypt() {
                 .text()
                 .then((jwt) =>
                 {
-                    console.log("JWT: ", jwt)
-                    jwtCache = jwt
-                    var decoded = jwt_decode(jwtCache)
-                    console.log("jwt decoded: ", decoded)
+                    //console.log("JWT: ", jwt)
+                    krCacheTemp.jwt = jwt
+                    //var decoded = jwt_decode(jwtCache)
+                    //console.log("jwt decoded: ", decoded)
                     // only need to do fetch request when keyrequest is same
                     return fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
-                    headers: {
-                    Authorization: `Bearer ${jwt}`,
+                        headers: {
+                        Authorization: `Bearer ${jwt}`,
                     },
                 })
                 
@@ -191,28 +263,28 @@ async function doDecrypt() {
         irma.use(IrmaPopup);
 
 
-        // jwtCache = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NzA1Mjc2NTcsImlhdCI6MTY3MDUyNzM1NywiaXNzIjoiaXJtYXNlcnZlciIsInN1YiI6ImRpc2Nsb3NpbmdfcmVzdWx0IiwidG9rZW4iOiIxb0hjd2h4M2NmZUdORHlmc3VDSyIsInN0YXR1cyI6IkRPTkUiLCJ0eXBlIjoiZGlzY2xvc2luZyIsInByb29mU3RhdHVzIjoiVkFMSUQiLCJkaXNjbG9zZWQiOltbeyJyYXd2YWx1ZSI6ImVzdGhyc2hpQGdtYWlsLmNvbSIsInZhbHVlIjp7IiI6ImVzdGhyc2hpQGdtYWlsLmNvbSIsImVuIjoiZXN0aHJzaGlAZ21haWwuY29tIiwibmwiOiJlc3RocnNoaUBnbWFpbC5jb20ifSwiaWQiOiJwYmRmLnNpZG4tcGJkZi5lbWFpbC5lbWFpbCIsInN0YXR1cyI6IlBSRVNFTlQiLCJpc3N1YW5jZXRpbWUiOjE2NjgwMzg0MDB9XV19.mIIYPEdhev2pKrNuGBERBio0V25OomCHXfTx5gqbzluwkDsXcWyfHDDTO6I_P1VJ0cMzoxe7YI0GQW4EdiqxEhmkICAj27kVwT8lFf9T3wgGOKo823_3gLvQEv-z2bJg4FUCyaV0kN5jNgIX5z4p5OMNn_0HAvTrl53y6bjYjvtLnO9F-RKjNZpzjDVh4jbPY5CZ-jqRHGJP90a62JxKQrr_zoO2dGOOJdf2fjLBwly3P7rkCw7oULLVlIEDdG1N3PqJkDT3rCIBe4ORmq9mzrtQB-JY_vpvYPfiAG0YbwqH_C6eq6QEuclYPeL65vIFOe9PjD5t5dgPZZ04gCDHXA'
+        //jwtCache = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2NzA4NTc0NjMsImlhdCI6MTY3MDg1Mzg2MywiaXNzIjoiaXJtYXNlcnZlciIsInN1YiI6ImRpc2Nsb3NpbmdfcmVzdWx0IiwidG9rZW4iOiJVT2doY1BNYlpyR3JFbkN4MEdMciIsInN0YXR1cyI6IkRPTkUiLCJ0eXBlIjoiZGlzY2xvc2luZyIsInByb29mU3RhdHVzIjoiVkFMSUQiLCJkaXNjbG9zZWQiOltbeyJyYXd2YWx1ZSI6ImVzdGhyc2hpQGdtYWlsLmNvbSIsInZhbHVlIjp7IiI6ImVzdGhyc2hpQGdtYWlsLmNvbSIsImVuIjoiZXN0aHJzaGlAZ21haWwuY29tIiwibmwiOiJlc3RocnNoaUBnbWFpbC5jb20ifSwiaWQiOiJwYmRmLnNpZG4tcGJkZi5lbWFpbC5lbWFpbCIsInN0YXR1cyI6IlBSRVNFTlQiLCJpc3N1YW5jZXRpbWUiOjE2NjgwMzg0MDB9XV19.nRDpkHVV6QcgU-DuM19SWgRm7nudIYnNgITxgqPHW1ramoRBC_zbCNIU0LdnsFvwZueozQhwjQk2f5NeOSRIwwodPDTx3oJT4yfTWPc0Xqg_x8cuqI3k0ibAhK0prXrKbEMiHQmYRQ_QwjTzS8lDjaorQxwCQcWUShlPArMqfLDvNh2KH6xw_JFIELqmvXdhqKiGM5GKk9zpXJIWEj6I_E5bKE7fxeoyCT6NBltJGz1FyQ_kq9NO1XeN1N-rqMz--fjMpJINVUPt50QuXD8exEGq4gMrnZ18aLXb9c2i5QWQ_YQnaVoqzfTL8gwQZah7Pv91bR4HG4PhUGq7FrmowQ'
 
-        // var decoded = jwt_decode(jwtCache)
-        // console.log("jwt decoded: ", decoded)
+    //     var decoded = jwt_decode(jwtCache)
+    //    console.log("jwt decoded: ", decoded)
 
-        // let usk
+    //     let usk
 
-        // usk = fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
-        //             headers: {
-        //             Authorization: `Bearer ${jwtCache}`,
-        //             },
-        //         })
-        //         .catch(e => {
-        //                 console.log(e);
-        //                 return e;
-        //         });
+    //     usk = await fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
+    //                 headers: {
+    //                 Authorization: `Bearer ${jwtCache}`,
+    //                 },
+    //             }).then((r) => r.json().then((o) => o.key))
+    //             .catch(e => {
+    //                     console.log(e);
+    //                     return e;
+    //             });
 
-        // console.log("usk: ", usk)
+    //     console.log("usk: ", usk)
 
 
-        const usk = await irma.start();
-        //const usk = "j1rZ6shxKcYB7sX0XYdQ802MNSLKo4qYgXYbE6Pb5m8mSYUxbZ4P1oasSocJp3MCGF8Wrnmc/oy4cRyGb+TBJfxULn0GHKhGLxXC5y5eFLU2wyAC3xxzYClmqk8jYVk4s13H4zFq16ZnZ98ChVZxxLefZY+ILcVjC9v6Ifw+Ohdl5ysI5jAidGPWrixcQEIcBDOgZZ2iBIqK1BRnfxOhWHVZicroyGpe8hbLFgS8e4lbg4j0Zj87Q3ZffnuNa7T5tnNbZJxnah7d8Nt672wumjdgSYOy9Dy2Sx7Zee6qDYnJWkP30nvUGne75JIzpXdFA320ZCZ1gcXDb4LsUZvRxeFYJYAwEtkow2Y6ubTLCjRRFGZy5rvq3NnfESNDwSkWjAja6eG8wRaAmCGzamlUljJl861KlNwKZNamx05EeS7vX2DfFYHpV3ErAlDZrrceF41jX+BNlFTEzZumlhmfOgP6gWFpQSRl56CpICgptsPXN9upEME49sU5js3f1ereijEGPyrHhuQvCGDt78wZEdICGAiuO1BwMHO8taUIkJOXM0d88uUnuV56GOCzqUs5FSIEas+CsRc3f4E/PnEPj4U+eUVCWX1aWKPz4OFcKAIlBXSw2mhoxzS8/1hixDI8pfpxoirgUSnC1J6A1IAtkB4+1qBfcTvfN+BxZEpQz6eoI3PhgImyZJhOe7h5/hEzFe1cc4GwmBbxfrE9A3AzOgM1dl0AE3bgwchKcGjWq93K6cSnxaCh/puf3/M5JnuC"
+        //const usk = await irma.start();
+        const usk = "j1rZ6shxKcYB7sX0XYdQ802MNSLKo4qYgXYbE6Pb5m8mSYUxbZ4P1oasSocJp3MCGF8Wrnmc/oy4cRyGb+TBJfxULn0GHKhGLxXC5y5eFLU2wyAC3xxzYClmqk8jYVk4s13H4zFq16ZnZ98ChVZxxLefZY+ILcVjC9v6Ifw+Ohdl5ysI5jAidGPWrixcQEIcBDOgZZ2iBIqK1BRnfxOhWHVZicroyGpe8hbLFgS8e4lbg4j0Zj87Q3ZffnuNa7T5tnNbZJxnah7d8Nt672wumjdgSYOy9Dy2Sx7Zee6qDYnJWkP30nvUGne75JIzpXdFA320ZCZ1gcXDb4LsUZvRxeFYJYAwEtkow2Y6ubTLCjRRFGZy5rvq3NnfESNDwSkWjAja6eG8wRaAmCGzamlUljJl861KlNwKZNamx05EeS7vX2DfFYHpV3ErAlDZrrceF41jX+BNlFTEzZumlhmfOgP6gWFpQSRl56CpICgptsPXN9upEME49sU5js3f1ereijEGPyrHhuQvCGDt78wZEdICGAiuO1BwMHO8taUIkJOXM0d88uUnuV56GOCzqUs5FSIEas+CsRc3f4E/PnEPj4U+eUVCWX1aWKPz4OFcKAIlBXSw2mhoxzS8/1hixDI8pfpxoirgUSnC1J6A1IAtkB4+1qBfcTvfN+BxZEpQz6eoI3PhgImyZJhOe7h5/hEzFe1cc4GwmBbxfrE9A3AzOgM1dl0AE3bgwchKcGjWq93K6cSnxaCh/puf3/M5JnuC"
         console.log("retrieved usk: ", usk);
 
         const t0 = performance.now();
@@ -227,8 +299,31 @@ async function doDecrypt() {
 
         console.log('decrypted file: ', outFile)
         //emailView.displayMail(outFile)
+
+        let ordered
+        console.log("check bool IRMA")
+
+        if($boolCacheIRMA) {
+            $krCache = [
+                    ...$krCache, krCacheTemp
+            ]
+
+            console.log("keyrequest to print: ", krCacheTemp)
+            // ordered = Object.keys(keyRequest).sort().reduce(
+            //     (obj, key) => {
+            //         obj[key] = keyRequest[key];
+            //         return obj;
+            //     },
+            //     {}
+            // );
+
+            // console.log("ordered: ", ordered);
+        }
+
         displayMail(outFile)
         enableDownload = true
+
+        
 }
 
 // download email on button click
@@ -268,15 +363,6 @@ async function displayMail(email) {
     curMailSubject.set(preview.subject)
     curMailDate.set(preview.headers[0]["value"])
     curMailHTML.set(preview.html)
-
-    var iframe = document.createElement('iframe');
-    var html = preview.html
-    iframe.src = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
-    iframe.width="800px";
-    iframe.height="500px";
-    document.getElementById("html-display").appendChild(iframe);
-    console.log('iframe.contentWindow =', iframe.contentWindow);
-
 
     // only cache email if option is checked
     if ($boolCacheEmail) {
@@ -381,23 +467,8 @@ allows user to see the credentials before they proceed with decryption  -->
 	{name} &lt;{address}&gt;, <!-- only add , if there are more than 1 recipients-->
 {/each}
 
- <!--{@html $curMailHTML} not properly escaped -->
 
- <div id="html-display">
-
- </div>
-
-<div id="html-container">
-    <div class="container-label">HTML</div>
-    <div id="html-content"></div>
-    <div><small><em>Images not shown? Mixed content is not allowed, so check that image links are not HTTP if this page is HTTPS.</em></small></div>
-</div>
-
-<div id="attachments-container">
-            <div class="container-label">Attachments</div>
-            <div class="content"></div>
-</div>
-
+{@html $curMailHTML}
 
 {/if}
 

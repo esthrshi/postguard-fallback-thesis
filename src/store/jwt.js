@@ -1,14 +1,21 @@
 import { writable } from 'svelte/store'
 import { browser } from '$app/environment'
 
-const storeJWTString = [
+const storeKrCache = [
   // {
-  //   jwt: ''
-  //   all the credentials associated with it. the exact phone number and student number must also match
+  //   jwt: '',
+  //   krStripped: '',
+  //   krSorted: {
+  //       email: 0,
+  //       mobilenumber: '',
+  //       surname: '',
+  //       dateofbirth: '',
+  //       studentid: '',
+  //       agb: ''
+  //   }
   // }
 ]
-
-export const jwtString = writable (
-  browser && (JSON.parse(localStorage.getItem("emails") || JSON.stringify(storeJWTString)))
+export const krCache = writable (
+  browser && (JSON.parse(localStorage.getItem("jwtcache") || JSON.stringify(storeKrCache)))
 )
-jwtString.subscribe((val) => browser && (localStorage.emails = JSON.stringify(val)))
+krCache.subscribe((val) => browser && (localStorage.jwtcache = JSON.stringify(val)))

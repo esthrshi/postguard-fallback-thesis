@@ -1,7 +1,14 @@
 import { writable } from 'svelte/store'
 import { browser } from '$app/environment'
 
-export const curMail = writable ()
+export const currentMail = writable ({
+  from: {},
+  to: [{}],
+  date: '',
+  subject: '',
+  body: ''
+})
+
 export const curMailSubject = writable ('')
 export const curMailDate = writable ('')
 export const curMailHTML = writable ('')

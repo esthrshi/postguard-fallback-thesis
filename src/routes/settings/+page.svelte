@@ -26,6 +26,10 @@ function deleteAllIRMA() {
   }
 }
 
+function deleteThisIRMA(selected) {
+    $krCache = $krCache.filter(x => x.jwtValid != selected.jwtValid)
+}
+
 </script>
 
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -55,11 +59,13 @@ function deleteAllIRMA() {
       <th></th>
     </tr>
 
+    {#each $krCache as kr}
     <tr>
-        <td>something1</td>
-        <td>something2</td>
-        <td><span class="material-icons" >delete</span></td>
+        <td>{kr.key}, {kr.krCon}</td>
+        <td>{kr.jwtValid}</td>
+        <td><span id="deletebutton" class="material-icons" on:click|preventDefault={() => deleteThisIRMA(kr)} on:keypress>delete</span></td>
     </tr>
+    {/each}
 
 </table>
 
@@ -107,6 +113,10 @@ h3 {
   padding: 7px;
   text-align: left;
   background-color: #d6d6d6;
+}
+
+#deletebutton {
+  cursor: pointer;
 }
 
 </style>

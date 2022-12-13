@@ -9,14 +9,17 @@ import "@privacybydesign/irma-css";
 // extra
 import { createWriteStream } from "streamsaver";
 import * as PostalMime from 'postal-mime'
+import jwt_decode from "jwt-decode";
 import { onMount } from 'svelte';
 
 // stores
 import { boolCacheEmail, boolCacheIRMA } from '../../store/settings.js'
+import { currentMail, emails } from '../../store/email.js'
 import { krCache } from '../../store/jwt.js'
 
 // logic
 import * as decrypt from './decrypt.js'
+import * as email from './email.js'
 
 // variables
 const pkg = "https://main.irmaseal-pkg.ihub.ru.nl"  // server for private key generator
@@ -48,8 +51,10 @@ let usk     // user secret key
 let enableSubmit = false
 let enableDownload = false
 let showSelection = false
+let showCreds = false
 
 let keySelection = ''
+let credslist = []
 
 // load WASM module and get key
 async function loadModule() {
@@ -66,6 +71,8 @@ let krCacheTemp =
     krCon: {}
   }
 
+let parsedMail
+
 // listen for file upload
 onMount(() => {
     const buttons = document.querySelectorAll("input");
@@ -80,6 +87,7 @@ const listener = async (event) => {
   const readable = inFile.stream();
 
     try {
+        doReset()
         unsealer = await mod.Unsealer.new(readable);
         policies = unsealer.get_hidden_policies();
         oneOrMultipleRecipients();
@@ -97,17 +105,13 @@ function oneOrMultipleRecipients() {
         key = Object.keys(policies)[0]
         krCacheTemp.key = key
         processPolicy()
+        processCredentials(key)
     } else {
         console.log("multiple recipients")
-        showSelection = true;
+        showSelection = true
         keylist = Object.keys(policies)
     }
-}
-
-// the user selected a key
-function getKey(selection) {
-    key = selection
-    processPolicy()
+    enableSubmit = true
 }
 
 // the chosen recipient is now checked for whether it is already cached in the store
@@ -116,7 +120,6 @@ function processPolicy() {
     timestamp = policies[key].ts 
     recipientAndCreds = decrypt.sortPolicies(policies[key]["con"])     // sort the recipient credentials on alphabetical order
     boolRecipientCached = checkRecipientCached()
-    enableSubmit = true
 }
 
 // check if the recipient with the credentials is already in the store
@@ -124,9 +127,13 @@ function checkRecipientCached() {
     console.log("check recipient cached")
     for (const kr of $krCache) { 
         if (kr.key === key && JSON.stringify(kr.krCon) === JSON.stringify(recipientAndCreds) ) {
-            jwtCached = kr.jwt
-            // TODO: check if this key is still valid. if not, remove it from the list
-            return true
+            if (Date.now()/1000 < kr.jwtValid) {
+                jwtCached = kr.jwt
+                return true
+            } else {    // jwt expired, so delete it
+                $krCache = $krCache.filter(x => x.exp != kr.exp)
+                break
+            }
         }
     }
     return false
@@ -134,6 +141,11 @@ function checkRecipientCached() {
 
 // send processed policy to the server and decrypt file
 function doDecrypt() {
+    if(showSelection) {
+        key = keySelection
+        processPolicy()
+    }
+
     if(boolRecipientCached) {
         getUskCachedJWT()
     } else {
@@ -145,10 +157,46 @@ function doDecrypt() {
 
 // cache the current credentials if user has chosen to
 function cacheCredentials() {
+    console.log("cache credentials")
+    let jwtdecoded = jwt_decode(krCacheTemp.jwt)
+    //jwtdecoded.exp
+    //recipientStripped = JSON.parse(JSON.stringify(recipientAndCreds))
+    let blabla = JSON.parse(JSON.stringify(jwtdecoded))
+
+    krCacheTemp.jwtValid = blabla.exp
+
+    //jwtdecoded["exp"]
+    
+    //console.log(jwtdecoded.exp)
+
+    //var decoded = jwt_decode(jwtCache)
+                        //console.log("jwt decoded: ", decoded)
+
     if($boolCacheIRMA) {
             $krCache = [
                     ...$krCache, krCacheTemp
             ]
+    }
+}
+
+// check if there are credentials with hints
+// if so, show them
+// TODO: ask leon if i need to pay attention to any other attributes
+function processCredentials(key) {
+    credslist = []
+    showCreds = false
+    let pol = policies[key]["con"]
+
+    for (var i = 0; i < pol.length; i++) {
+
+        if(pol[i]["t"] == "pbdf.sidn-pbdf.mobilenumber.mobilenumber") {
+            showCreds = true;
+            credslist.push("Mobile number: " + pol[i]["v"])
+        }
+        else if (pol[i]["t"] == "pbdf.pbdf.surfnet-2.id") { // not sure if else if syntax is correct here?
+            showCreds = true;
+            credslist.push("Student ID: " + pol[i]["v"])
+        }
     }
 }
 
@@ -243,13 +291,59 @@ async function getUsk() {
 async function decryptFile() {
     await unsealer.unseal(key, usk, unsealerWritable);
     console.log("outfile: ", outFile)
-    //displayMail(outFile)
+    //email.parseMail(outFile).then((r) => r.json().then((r) => parsedMail = r) )
+
+    //let parsedMail
+    parseMail(outFile)
+    //console.log("parsed mail: ", $curMail)
     enableDownload = true
 }
 
 // reset values, not sure if necessary, maybe force page reload?
 function doReset() {
-    enableSubmit = enableDownload = false
+    enableSubmit = enableDownload = showSelection = showCreds = false   // would this make all the values change when you change one in the future?
+    keySelection = ''
+    credslist = []
+    //window.location.reload();   // produces error
+}
+
+
+
+
+
+async function parseMail(unparsed) {
+    
+    const parser = new PostalMime.default()
+    let preview = await parser.parse(unparsed)
+    $currentMail.from = preview.from      // when should i use $?
+    $currentMail.to = preview.to    
+    $currentMail.date = preview.headers[0]["value"]
+    $currentMail.subject = preview.subject
+    $currentMail.body = preview.html
+
+    // only cache email if option is checked
+    if ($boolCacheEmail) {
+        let currentID
+        if ($emails[0]) {
+            console.log("not empty")
+            currentID = $emails[0].id+1
+        } else {
+            console.log("empty")
+            currentID = 0
+        }
+
+        $emails = [ // can this be more optimized?
+                    {
+                        id: currentID,
+                        from: preview.from,
+                        to: preview.to,
+                        date: preview.headers[0]["value"],
+                        subject: preview.subject, 
+                        raw: unparsed
+                    },
+                    ...$emails,
+        ]
+    }
 }
 
 </script>
@@ -281,7 +375,7 @@ System error: {someError.message}.
 <div id='block'>
     {#if showSelection }
         <p><b>Please select which email belongs to you:</b></p>
-        <select bind:value={keySelection} on:change={() => getKey(keySelection) }>
+        <select bind:value={keySelection} on:change={() => processCredentials(keySelection) }>
             {#each keylist as key}
                 <option value={key}>
                     {key}
@@ -290,6 +384,16 @@ System error: {someError.message}.
         </select>
     
         <p>You selected {keySelection}</p>
+    {/if}
+</div>
+
+<!-- if there are credentials with a preview, show them -->
+<div id='block'>
+    {#if showCreds}
+    <b>Your credentials:</b><br>
+        {#each credslist as cred }
+            {cred}<br>
+        {/each}
     {/if}
     </div>
 
@@ -302,8 +406,37 @@ allows user to see the credentials before they proceed with decryption  -->
     </button>
 </div>
 
+<!-- put in separate component? -->
+{#if enableDownload}
+    <h3>E-mail Preview</h3>
+
+    <b>Subject:</b> {$currentMail.subject} <br>
+    <b>Date:</b> {$currentMail.date} <br>    <!-- need to parse this date, convert to local timezone, or not? -->
+    <b>From (Sender):</b> {$currentMail.from.name} &lt;{$currentMail.from.address}&gt; <br>
+    <b>To Recipient(s): </b> 
+
+    {#each $currentMail.to as { name, address } }
+        {name} &lt;{address}&gt;, <!-- only add , if there are more than 1 recipients-->
+    {/each}
+
+
+    {@html $currentMail.body}
+
+{/if}
+
+<!-- download decrypted file -->
 <div id='block'>
-    <button class="button" on:click={doReset}>
-        Reset
+    <button class="button" disabled={!enableDownload} on:click={() => email.downloadFile(outFile)}>
+        Download
     </button>
 </div>
+
+<style>
+
+select {
+    padding: 5px;
+    border: 1px solid #d6d6d6;
+    border-radius: 5px;
+}
+
+</style>

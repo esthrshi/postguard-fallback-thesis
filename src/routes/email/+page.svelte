@@ -39,10 +39,6 @@ function deleteMail() {
     showBody = false
 }
 
-function deleteAll() {
-    //ask for confirmation
-}
-
 function downloadMail() {
     const downFile = new Blob([currentEmail], { type: "text/html"}) // not sure if text/html is correct....
     let a = document.createElement("a"),

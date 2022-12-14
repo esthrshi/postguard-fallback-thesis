@@ -40,6 +40,7 @@
 		"@privacybydesign/irma-core": "^0.4.3",
 		"@privacybydesign/irma-css": "^0.4.3",
 		"@privacybydesign/irma-popup": "^0.4.3",
+		"js-base64": "^3.7.3",
 		"jwt-decode": "^3.1.2",
 		"moment": "^2.29.4",
 		"postal-mime": "^1.0.13",

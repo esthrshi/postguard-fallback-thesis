@@ -7,10 +7,12 @@ import * as IrmaPopup from "@privacybydesign/irma-popup";
 import "@privacybydesign/irma-css";
 
 // extra
-import { createWriteStream } from "streamsaver";
-import * as PostalMime from 'postal-mime'
+//import { createWriteStream } from "streamsaver";
+//import * as PostalMime from 'postal-mime'
 import jwt_decode from "jwt-decode";
+import {Base64} from 'js-base64';
 import { onMount } from 'svelte';
+import { page } from '$app/stores';
 
 // stores
 import { boolCacheEmail, boolCacheIRMA } from '../../store/settings.js'
@@ -48,6 +50,7 @@ let jwtCached   // cached jwt, if it exists
 
 let usk     // user secret key
 
+let fileSubmitted = false
 let enableSubmit = false
 let enableDownload = false
 let showSelection = false
@@ -55,6 +58,10 @@ let showCreds = false
 
 let keySelection = ''
 let credslist = []
+
+let inputtext
+
+let param
 
 // load WASM module and get key
 async function loadModule() {
@@ -76,25 +83,68 @@ let parsedMail
 // listen for file upload
 onMount(() => {
     const buttons = document.querySelectorAll("input");
-    buttons.forEach((btn) => btn.addEventListener("change", listener));
+   // buttons.forEach((btn) => btn.addEventListener("change", listener));
+
+    // see if there's a parameter in the url
+    // TODO: should be improved
+    param = $page.url.search
 })
 
 // take input file and get hidden policies
-const listener = async (event) => {
-  const decrypt = event.srcElement.classList.contains("decrypt");
-  [inFile] = event.srcElement.files;
+// const listener = async (event) => {
+//   const decrypt = event.srcElement.classList.contains("decrypt");
+//   [inFile] = event.srcElement.files;
+//   const readable = inFile.stream();
 
-  const readable = inFile.stream();
+// //   let content = await inFile.text()
+// //   console.log("content: ", content)
+
+//     // let sealerReadable = new ReadableStream({
+//     // start: (controller) => {
+//     //     const encoded = new TextEncoder().encode(encodethis);
+//     //     controller.enqueue(encoded);
+//     //     //controller.close();
+//     //     },
+//     // });
+
+//     try {
+//         doReset()
+//         console.log("try")
+//         unsealer = await mod.Unsealer.new(readable);
+//         console.log("after unsealer")
+//         policies = unsealer.get_hidden_policies();
+//         oneOrMultipleRecipients();
+//     }
+//     catch (e) {
+//         console.log("error during unsealing: ", e);
+//     }
+// }
+
+async function fromParam() {
+    let spliced = param.slice(11)
+    console.log("url: ", spliced)
+    let decoded2 = Base64.toUint8Array(spliced);
+
+    let sealerReadable = new ReadableStream({
+    start: (controller) => {
+        const encoded = decoded2
+        controller.enqueue(encoded);
+        controller.close();
+        },
+    });
 
     try {
         doReset()
-        unsealer = await mod.Unsealer.new(readable);
+        console.log("try")
+        unsealer = await mod.Unsealer.new(sealerReadable);
+        console.log("after unsealer")
         policies = unsealer.get_hidden_policies();
         oneOrMultipleRecipients();
     }
     catch (e) {
         console.log("error during unsealing: ", e);
     }
+
 }
 
 // takes the hidden policies from the encrypted file, and checks whether there is one recipient
@@ -159,24 +209,17 @@ function doDecrypt() {
 function cacheCredentials() {
     console.log("cache credentials")
     let jwtdecoded = jwt_decode(krCacheTemp.jwt)
-    //jwtdecoded.exp
-    //recipientStripped = JSON.parse(JSON.stringify(recipientAndCreds))
     let blabla = JSON.parse(JSON.stringify(jwtdecoded))
 
     krCacheTemp.jwtValid = blabla.exp
-
-    //jwtdecoded["exp"]
-    
-    //console.log(jwtdecoded.exp)
-
-    //var decoded = jwt_decode(jwtCache)
-                        //console.log("jwt decoded: ", decoded)
 
     if($boolCacheIRMA) {
             $krCache = [
                     ...$krCache, krCacheTemp
             ]
     }
+
+    console.log("end cache credentials")
 }
 
 // check if there are credentials with hints
@@ -289,14 +332,13 @@ async function getUsk() {
 }
 
 async function decryptFile() {
-    await unsealer.unseal(key, usk, unsealerWritable);
-    console.log("outfile: ", outFile)
-    //email.parseMail(outFile).then((r) => r.json().then((r) => parsedMail = r) )
 
-    //let parsedMail
-    parseMail(outFile)
-    //console.log("parsed mail: ", $curMail)
+    console.log("decrypt file")
+    await unsealer.unseal(key, usk, unsealerWritable);
+    console.log("after unsealer")
+    console.log("outfile: ", outFile)
     enableDownload = true
+    console.log("end decrypt file")
 }
 
 // reset values, not sure if necessary, maybe force page reload?
@@ -307,43 +349,47 @@ function doReset() {
     //window.location.reload();   // produces error
 }
 
-
-
-
-
-async function parseMail(unparsed) {
+// async function parseMail(unparsed) {
     
-    const parser = new PostalMime.default()
-    let preview = await parser.parse(unparsed)
-    $currentMail.from = preview.from      // when should i use $?
-    $currentMail.to = preview.to    
-    $currentMail.date = preview.headers[0]["value"]
-    $currentMail.subject = preview.subject
-    $currentMail.body = preview.html
+//     const parser = new PostalMime.default()
+//     let preview = await parser.parse(unparsed)
+//     $currentMail.from = preview.from      // when should i use $?
+//     $currentMail.to = preview.to    
+//     $currentMail.date = preview.headers[0]["value"]
+//     $currentMail.subject = preview.subject
+//     $currentMail.body = preview.html
 
-    // only cache email if option is checked
-    if ($boolCacheEmail) {
-        let currentID
-        if ($emails[0]) {
-            console.log("not empty")
-            currentID = $emails[0].id+1
-        } else {
-            console.log("empty")
-            currentID = 0
-        }
+//     // only cache email if option is checked
+//     if ($boolCacheEmail) {
+//         let currentID
+//         if ($emails[0]) {
+//             console.log("not empty")
+//             currentID = $emails[0].id+1
+//         } else {
+//             console.log("empty")
+//             currentID = 0
+//         }
 
-        $emails = [ // can this be more optimized?
-                    {
-                        id: currentID,
-                        from: preview.from,
-                        to: preview.to,
-                        date: preview.headers[0]["value"],
-                        subject: preview.subject, 
-                        raw: unparsed
-                    },
-                    ...$emails,
-        ]
-    }
+//         $emails = [ // can this be more optimized?
+//                     {
+//                         id: currentID,
+//                         from: preview.from,
+//                         to: preview.to,
+//                         date: preview.headers[0]["value"],
+//                         subject: preview.subject, 
+//                         raw: unparsed
+//                     },
+//                     ...$emails,
+//         ]
+//     }
+// }
+
+function processText() {
+    let decodedbase64 = atob(inputtext)
+    console.log("decoded base64: ", decodedbase64)
+
+    console.log("compare: ", inputtext == decodedbase64)
+
 }
 
 </script>
@@ -431,12 +477,48 @@ allows user to see the credentials before they proceed with decryption  -->
     </button>
 </div>
 
+<!-- <div id='block'>
+    <button class="button" on:click={testURI}>
+        process text
+    </button>
+</div> -->
+
+
+<!-- {#if fileSubmitted}
+  <p>{inFile.name} {inFile.size} bytes</p>
+  {#await inFile.text() then text}
+    {text}
+  {/await}
+{/if} -->
+
+{#if param}
+
+    <div id="textbox">
+        {param}
+    </div>
+
+    <button class="button" on:click={fromParam}>
+        send nuke
+    </button>
+{/if}
+
+
+
+
 <style>
 
 select {
     padding: 5px;
     border: 1px solid #d6d6d6;
     border-radius: 5px;
+}
+
+#textbox {
+    width: 500px;
+    height: 300px;
+    overflow: scroll;
+    overflow-wrap: break-word;
+    border: 1px solid black;
 }
 
 </style>

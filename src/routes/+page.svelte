@@ -1,18 +1,14 @@
 <script>
-import { onMount } from 'svelte';
-import { page } from '$app/stores';
-
-let url = window.location.href
-let query = url + "decrypt?encrypted=FIqOpwABAAACA4OicnOBsmVzdGhyc2hpQGdtYWlsLmNvbYKhcIKidHPOY5mvmqNjb26RgqF0unBiZGYuc2lkbi1wYmRmLmVtYWlsLmVtYWlsoXagomN03AEAzI7M9CZFzMYYzJbM9gYEzLZMIMytzJjMsWHMlHbMuMzHzPZ5zK1uzKvMwCPM5ycYYSc0ZwvM78yUMMyDzIMxzPEpzIfMhUpEzIRRzJPMwMyLX8z5ScyWGcz+HMzgE8yszKLMz8y3zLMUzInMqklMH3bMjMzQzONMHS3MiszxbszHXcyaOmEGzL8RzOvMlMyozOTMlMyVzPV1e8yKzMENzJRtNMzDzJxIeVvM7jrM/RTMpCXM6ChmzI3MpczszI/M48zQbcyPzNoKzLx0zPlOcXZozOMQzLLMoUkuzOzMiRPMksymzK7MrMyOzMRazPV5Wcy5zKJJesyhzKHMuXPMj8ypNlRAzKxHzLU+zNPMgMyDzO1VzNbMmcz9HylNzMFFzPrM1czBzL/Mq8z1eszizJ3M2VN3zJnMxDLM9MzZQWrMi8zqV8yczLTM28yCTQfMsFbMjUzM4SNazJPMr8zWNjnMtMyGDREhzN12zKUgBmpUzIt6RczPzPYqB2FgzJbMzMzgzMfMyBRoWsymoml23AAQBRnMvcyxzObMk3o/zITM/cz5zJfM8VJIZaJjc84AEAAAUe9RFL5ZJA3axFIs6Ua2wknIGvrKtpOVHtVKrnvAR98VKw1fCDRBGxoJoHISebwRX4moGGqrvXEtmygeCHYg1ewW9wGa05QDQN7GA2AT3pTqnTIuPFNupYtrXXO6akoKKZRzXxTXTZXifMdL0y/d8B9uWOzGSw3kST6e7ehYb2WnzWYqDaMDCvaSxkGf32Ddxz4V6aOantXP6lU25GzQt5WW601LsQ+cT1PEy5U0YOeyD0rOEGH2ZRYJfBpfzdk1wLRtq0Zt2CvlR02yR1FXH+sjeu8lRtwHO/VZEGG0yz2ANMscHjo+vt49w/sAs6rIbmvnR6bbYuOgvoT9e+v0Q4ePvwSn6ERj/r6pyRwjt3epcO95aadlBO8Df6HwdtB2MemD0uOdySZ9O20KyDH7lHsMFihQCWHM0ck6"
-
-
+    // import { onMount } from 'svelte';
+    // import { page } from '$app/stores';
+    
+    // let url = window.location.href
+    // let query = url + "decrypt#encrypted="
+    
 </script>
 
-<h1>Postguard</h1>
+<h1>Postguard Fallback</h1>
 
-<p>Introduction... explanation... blabla</p>
+<p>Welcome to the </p>
 
-<a href={query} >click here</a>
-
-
-
+<!-- <a href={query} >click here</a> -->

@@ -66,8 +66,8 @@ let param
 // load WASM module and get key
 async function loadModule() {
     mod = await import("@e4a/irmaseal-wasm-bindings");
-    const resp = await fetch(`${pkg}/v2/parameters`);
-    mpk = await resp.json().then((r) => r.publicKey);
+    //const resp = await fetch(`${pkg}/v2/parameters`);
+    //mpk = await resp.json().then((r) => r.publicKey);
 }
 
 let krCacheTemp =
@@ -83,44 +83,45 @@ let parsedMail
 // listen for file upload
 onMount(() => {
     const buttons = document.querySelectorAll("input");
-   // buttons.forEach((btn) => btn.addEventListener("change", listener));
+    buttons.forEach((btn) => btn.addEventListener("change", listener));
 
     // see if there's a parameter in the url
     // TODO: should be improved
-    param = $page.url.search
+    param = $page.url.hash
 })
 
-// take input file and get hidden policies
-// const listener = async (event) => {
-//   const decrypt = event.srcElement.classList.contains("decrypt");
-//   [inFile] = event.srcElement.files;
-//   const readable = inFile.stream();
+//take input file and get hidden policies
+const listener = async (event) => {
+  const decrypt = event.srcElement.classList.contains("decrypt");
+  [inFile] = event.srcElement.files;
+  const readable = inFile.stream();
 
-// //   let content = await inFile.text()
-// //   console.log("content: ", content)
+//   let content = await inFile.text()
+//   console.log("content: ", content)
 
-//     // let sealerReadable = new ReadableStream({
-//     // start: (controller) => {
-//     //     const encoded = new TextEncoder().encode(encodethis);
-//     //     controller.enqueue(encoded);
-//     //     //controller.close();
-//     //     },
-//     // });
+    // let sealerReadable = new ReadableStream({
+    // start: (controller) => {
+    //     const encoded = new TextEncoder().encode(encodethis);
+    //     controller.enqueue(encoded);
+    //     //controller.close();
+    //     },
+    // });
 
-//     try {
-//         doReset()
-//         console.log("try")
-//         unsealer = await mod.Unsealer.new(readable);
-//         console.log("after unsealer")
-//         policies = unsealer.get_hidden_policies();
-//         oneOrMultipleRecipients();
-//     }
-//     catch (e) {
-//         console.log("error during unsealing: ", e);
-//     }
-// }
+    try {
+        doReset()
+        console.log("try")
+        unsealer = await mod.Unsealer.new(readable);
+        console.log("after unsealer")
+        policies = unsealer.get_hidden_policies();
+        oneOrMultipleRecipients();
+    }
+    catch (e) {
+        console.log("error during unsealing: ", e);
+    }
+}
 
 async function fromParam() {
+    console.log("param: ", param)
     let spliced = param.slice(11)
     console.log("url: ", spliced)
     let decoded2 = Base64.toUint8Array(spliced);
@@ -137,6 +138,7 @@ async function fromParam() {
         doReset()
         console.log("try")
         unsealer = await mod.Unsealer.new(sealerReadable);
+        //await new Promise(resolve => setTimeout(resolve, 50000))
         console.log("after unsealer")
         policies = unsealer.get_hidden_policies();
         oneOrMultipleRecipients();
@@ -209,9 +211,11 @@ function doDecrypt() {
 function cacheCredentials() {
     console.log("cache credentials")
     let jwtdecoded = jwt_decode(krCacheTemp.jwt)
-    let blabla = JSON.parse(JSON.stringify(jwtdecoded))
+    //let blabla = JSON.parse(JSON.stringify(jwtdecoded))
 
-    krCacheTemp.jwtValid = blabla.exp
+    //console.log("jwt decoded: ", jwtdecoded.exp)
+
+    krCacheTemp.jwtValid = jwtdecoded.exp
 
     if($boolCacheIRMA) {
             $krCache = [
@@ -335,6 +339,7 @@ async function decryptFile() {
 
     console.log("decrypt file")
     await unsealer.unseal(key, usk, unsealerWritable);
+    //await new Promise(resolve => setTimeout(resolve, 50000))
     console.log("after unsealer")
     console.log("outfile: ", outFile)
     enableDownload = true

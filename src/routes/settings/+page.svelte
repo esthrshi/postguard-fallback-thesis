@@ -30,6 +30,47 @@ function deleteThisIRMA(selected) {
     $krCache = $krCache.filter(x => x.jwtValid != selected.jwtValid)
 }
 
+function getstuff(input) {
+  console.log(input)
+  let str = []
+    for (const e of input) {
+      console.log(e)
+      switch (e["t"]) {
+        case 'pbdf.gemeente.personalData.surname': str.push("Surname"); break;
+        case 'pbdf.pbdf.surfnet-2.id': str.push("Student ID: " + e["v"]); break;
+        case 'pbdf.sidn-pbdf.mobilenumber.mobilenumber': str.push("Mobile number: " + e["v"]); break;
+        case 'pbdf.nuts.agb.agbcode': str.push("BSN\n"); break;
+      }  
+    }
+
+    console.log(str)
+    return str
+  //   switch (expr) {
+  // case 'Oranges':
+  //   console.log('Oranges are $0.59 a pound.');
+  //   break;
+  // case 'Mangoes':
+  // case 'Papayas':
+  //   console.log('Mangoes and papayas are $2.79 a pound.');
+  //   // Expected output: "Mangoes and papayas are $2.79 a pound."
+  //   break;
+  // default:
+}
+
+// put in separate file
+function timeConverter(UNIX_timestamp){
+  var a = new Date(UNIX_timestamp * 1000);
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var year = a.getFullYear();
+  var month = months[a.getMonth()];
+  var date = a.getDate();
+  var hour = a.getHours();
+  var min = a.getMinutes();
+  var sec = a.getSeconds();
+  var time = date + ' ' + month + ' ' + year + ' ' + hour + ':' + min + ':' + sec ;
+  return time;
+}
+
 </script>
 
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -61,8 +102,12 @@ function deleteThisIRMA(selected) {
 
     {#each $krCache as kr}
     <tr>
-        <td>{kr.key}, {kr.krCon}</td>
-        <td>{kr.jwtValid}</td>
+        <td>{kr.key} <br>
+          {#each getstuff(kr.krCon) as cred }
+            {cred}<br>
+          {/each}
+        </td>
+        <td>{timeConverter (kr.jwtValid) }</td>
         <td><span id="deletebutton" class="material-icons" on:click|preventDefault={() => deleteThisIRMA(kr)} on:keypress>delete</span></td>
     </tr>
     {/each}

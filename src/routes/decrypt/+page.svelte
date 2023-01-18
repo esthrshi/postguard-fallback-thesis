@@ -8,7 +8,7 @@ import "@privacybydesign/irma-css";
 
 // extra
 //import { createWriteStream } from "streamsaver";
-//import * as PostalMime from 'postal-mime'
+import * as PostalMime from 'postal-mime'
 import jwt_decode from "jwt-decode";
 import {Base64} from 'js-base64';
 import { onMount } from 'svelte';
@@ -113,6 +113,7 @@ const listener = async (event) => {
         unsealer = await mod.Unsealer.new(readable);
         console.log("after unsealer")
         policies = unsealer.get_hidden_policies();
+        console.log("policies: ", policies)
         oneOrMultipleRecipients();
     }
     catch (e) {
@@ -141,6 +142,7 @@ async function fromParam() {
         //await new Promise(resolve => setTimeout(resolve, 50000))
         console.log("after unsealer")
         policies = unsealer.get_hidden_policies();
+        console.log("policies: ", policies)
         oneOrMultipleRecipients();
     }
     catch (e) {
@@ -342,6 +344,7 @@ async function decryptFile() {
     //await new Promise(resolve => setTimeout(resolve, 50000))
     console.log("after unsealer")
     console.log("outfile: ", outFile)
+    parseMail(outFile)
     enableDownload = true
     console.log("end decrypt file")
 }
@@ -354,40 +357,40 @@ function doReset() {
     //window.location.reload();   // produces error
 }
 
-// async function parseMail(unparsed) {
+async function parseMail(unparsed) {
     
-//     const parser = new PostalMime.default()
-//     let preview = await parser.parse(unparsed)
-//     $currentMail.from = preview.from      // when should i use $?
-//     $currentMail.to = preview.to    
-//     $currentMail.date = preview.headers[0]["value"]
-//     $currentMail.subject = preview.subject
-//     $currentMail.body = preview.html
+    const parser = new PostalMime.default()
+    let preview = await parser.parse(unparsed)
+    $currentMail.from = preview.from      // when should i use $?
+    $currentMail.to = preview.to    
+    $currentMail.date = preview.headers[0]["value"]
+    $currentMail.subject = preview.subject
+    $currentMail.body = preview.html
 
-//     // only cache email if option is checked
-//     if ($boolCacheEmail) {
-//         let currentID
-//         if ($emails[0]) {
-//             console.log("not empty")
-//             currentID = $emails[0].id+1
-//         } else {
-//             console.log("empty")
-//             currentID = 0
-//         }
+    // only cache email if option is checked
+    if ($boolCacheEmail) {
+        let currentID
+        if ($emails[0]) {
+            console.log("not empty")
+            currentID = $emails[0].id+1
+        } else {
+            console.log("empty")
+            currentID = 0
+        }
 
-//         $emails = [ // can this be more optimized?
-//                     {
-//                         id: currentID,
-//                         from: preview.from,
-//                         to: preview.to,
-//                         date: preview.headers[0]["value"],
-//                         subject: preview.subject, 
-//                         raw: unparsed
-//                     },
-//                     ...$emails,
-//         ]
-//     }
-// }
+        $emails = [ // can this be more optimized?
+                    {
+                        id: currentID,
+                        from: preview.from,
+                        to: preview.to,
+                        date: preview.headers[0]["value"],
+                        subject: preview.subject, 
+                        raw: unparsed
+                    },
+                    ...$emails,
+        ]
+    }
+}
 
 function processText() {
     let decodedbase64 = atob(inputtext)

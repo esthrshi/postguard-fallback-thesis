@@ -1,7 +1,7 @@
 <script>
 import { emails } from './../../store/email.js'
 import * as PostalMime from 'postal-mime'
-	import { browser } from '$app/environment';
+import { browser } from '$app/environment';
 //import moment from 'moment'
 
 let showBody = false

@@ -7,27 +7,25 @@ import * as IrmaPopup from "@privacybydesign/irma-popup";
 import "@privacybydesign/irma-css";
 
 // extra
-//import { createWriteStream } from "streamsaver";
-import * as PostalMime from 'postal-mime'
 import jwt_decode from "jwt-decode";
-import {Base64} from 'js-base64';
 import { onMount } from 'svelte';
-import { page } from '$app/stores';
+import { browser } from '$app/environment'
 
 // stores
 import { boolCacheEmail, boolCacheIRMA } from '../../store/settings.js'
-import { currentMail, emails } from '../../store/email.js'
+import { emails } from '../../store/email.js'
 import { krCache } from '../../store/jwt.js'
 
 // logic
 import * as decrypt from './decrypt.js'
-import * as email from './email.js'
+
+// components
+import EmailView from './../../components/emailView.svelte'
 
 // variables
 const pkg = "https://main.irmaseal-pkg.ihub.ru.nl"  // server for private key generator
 let mod     // WASM module
-let mpk     // master private key
-let unsealer    // 
+let unsealer 
 
 let inFile          // input file
 let outFile = "";   // output file
@@ -38,6 +36,7 @@ write: (chunk) => {
 });
 
 let policies    // hidden policies
+let usk     // user secret key
 let keylist     // list of keys (if there are multiple recipients)
 let key         // key (email of recipient)
 let keyRequest  // key request: sent to server
@@ -48,9 +47,6 @@ var timestamp
 let boolRecipientCached
 let jwtCached   // cached jwt, if it exists
 
-let usk     // user secret key
-
-let fileSubmitted = false
 let enableSubmit = false
 let enableDownload = false
 let showSelection = false
@@ -59,17 +55,7 @@ let showCreds = false
 let keySelection = ''
 let credslist = []
 
-let inputtext
-
-let param
-
-// load WASM module and get key
-async function loadModule() {
-    mod = await import("@e4a/irmaseal-wasm-bindings");
-    //const resp = await fetch(`${pkg}/v2/parameters`);
-    //mpk = await resp.json().then((r) => r.publicKey);
-}
-
+// JWT cache
 let krCacheTemp =
   {
     jwt: '',
@@ -78,16 +64,25 @@ let krCacheTemp =
     krCon: {}
   }
 
-let parsedMail
+let email   // email.js
+let decryptedMail
 
-// listen for file upload
+// load WASM module and get key
+async function loadModule() {
+    mod = await import("@e4a/irmaseal-wasm-bindings");
+}
+
 onMount(() => {
+    // listen for file upload
     const buttons = document.querySelectorAll("input");
     buttons.forEach((btn) => btn.addEventListener("change", listener));
 
-    // see if there's a parameter in the url
-    // TODO: should be improved
-    param = $page.url.hash
+    // postalmime only works in browser
+    if (browser) {
+        import('./../../logic/email.js').then((module) => {
+            email = module
+        });
+    }
 })
 
 //take input file and get hidden policies
@@ -96,72 +91,26 @@ const listener = async (event) => {
   [inFile] = event.srcElement.files;
   const readable = inFile.stream();
 
-//   let content = await inFile.text()
-//   console.log("content: ", content)
-
-    // let sealerReadable = new ReadableStream({
-    // start: (controller) => {
-    //     const encoded = new TextEncoder().encode(encodethis);
-    //     controller.enqueue(encoded);
-    //     //controller.close();
-    //     },
-    // });
-
     try {
         doReset()
-        console.log("try")
         unsealer = await mod.Unsealer.new(readable);
-        console.log("after unsealer")
         policies = unsealer.get_hidden_policies();
-        console.log("policies: ", policies)
         oneOrMultipleRecipients();
     }
     catch (e) {
         console.log("error during unsealing: ", e);
     }
-}
-
-async function fromParam() {
-    console.log("param: ", param)
-    let spliced = param.slice(11)
-    console.log("url: ", spliced)
-    let decoded2 = Base64.toUint8Array(spliced);
-
-    let sealerReadable = new ReadableStream({
-    start: (controller) => {
-        const encoded = decoded2
-        controller.enqueue(encoded);
-        controller.close();
-        },
-    });
-
-    try {
-        doReset()
-        console.log("try")
-        unsealer = await mod.Unsealer.new(sealerReadable);
-        //await new Promise(resolve => setTimeout(resolve, 50000))
-        console.log("after unsealer")
-        policies = unsealer.get_hidden_policies();
-        console.log("policies: ", policies)
-        oneOrMultipleRecipients();
-    }
-    catch (e) {
-        console.log("error during unsealing: ", e);
-    }
-
 }
 
 // takes the hidden policies from the encrypted file, and checks whether there is one recipient
 // or multiple
 function oneOrMultipleRecipients() {
     if (Object.keys(policies).length == 1) {
-        console.log("one recipient")
         key = Object.keys(policies)[0]
         krCacheTemp.key = key
         processPolicy()
         processCredentials(key)
     } else {
-        console.log("multiple recipients")
         showSelection = true
         keylist = Object.keys(policies)
     }
@@ -170,7 +119,6 @@ function oneOrMultipleRecipients() {
 
 // the chosen recipient is now checked for whether it is already cached in the store
 function processPolicy() {
-    console.log("process policy")
     timestamp = policies[key].ts 
     recipientAndCreds = decrypt.sortPolicies(policies[key]["con"])     // sort the recipient credentials on alphabetical order
     boolRecipientCached = checkRecipientCached()
@@ -178,7 +126,6 @@ function processPolicy() {
 
 // check if the recipient with the credentials is already in the store
 function checkRecipientCached() {
-    console.log("check recipient cached")
     for (const kr of $krCache) { 
         if (kr.key === key && JSON.stringify(kr.krCon) === JSON.stringify(recipientAndCreds) ) {
             if (Date.now()/1000 < kr.jwtValid) {
@@ -211,12 +158,7 @@ function doDecrypt() {
 
 // cache the current credentials if user has chosen to
 function cacheCredentials() {
-    console.log("cache credentials")
     let jwtdecoded = jwt_decode(krCacheTemp.jwt)
-    //let blabla = JSON.parse(JSON.stringify(jwtdecoded))
-
-    //console.log("jwt decoded: ", jwtdecoded.exp)
-
     krCacheTemp.jwtValid = jwtdecoded.exp
 
     if($boolCacheIRMA) {
@@ -224,13 +166,10 @@ function cacheCredentials() {
                     ...$krCache, krCacheTemp
             ]
     }
-
-    console.log("end cache credentials")
 }
 
 // check if there are credentials with hints
 // if so, show them
-// TODO: ask leon if i need to pay attention to any other attributes
 function processCredentials(key) {
     credslist = []
     showCreds = false
@@ -242,7 +181,7 @@ function processCredentials(key) {
             showCreds = true;
             credslist.push("Mobile number: " + pol[i]["v"])
         }
-        else if (pol[i]["t"] == "pbdf.pbdf.surfnet-2.id") { // not sure if else if syntax is correct here?
+        else if (pol[i]["t"] == "pbdf.pbdf.surfnet-2.id") { 
             showCreds = true;
             credslist.push("Student ID: " + pol[i]["v"])
         }
@@ -264,7 +203,6 @@ function createKr() {
         con: recipientStripped,
         validity: decrypt.secondsTill4AM()
     }
-    console.log("key request: ", keyRequest)
 }
 
 // get the usk using a cached jwt value
@@ -284,7 +222,6 @@ async function getUskCachedJWT() {
 }
 
 async function getUsk() {
-    console.log('get usk')
     const session = {
             url: pkg,
             start: {
@@ -294,7 +231,6 @@ async function getUsk() {
                 body: JSON.stringify(keyRequest),
             },
             mapping: {
-                // temporary fix, what is this fix for?
                 sessionPtr: (r) => {
                 const ptr = r.sessionPtr;
                 ptr.u = `https://ihub.ru.nl/irma/1/${ptr.u}`;
@@ -338,53 +274,37 @@ async function getUsk() {
 }
 
 async function decryptFile() {
-
-    console.log("decrypt file")
     await unsealer.unseal(key, usk, unsealerWritable);
-    //await new Promise(resolve => setTimeout(resolve, 50000))
-    console.log("after unsealer")
-    console.log("outfile: ", outFile)
-    parseMail(outFile)
+    storeMail(outFile)
     enableDownload = true
-    console.log("end decrypt file")
 }
 
 // reset values, not sure if necessary, maybe force page reload?
 function doReset() {
-    enableSubmit = enableDownload = showSelection = showCreds = false   // would this make all the values change when you change one in the future?
+    enableSubmit = enableDownload = showSelection = showCreds = false
     keySelection = ''
     credslist = []
-    //window.location.reload();   // produces error
 }
 
-async function parseMail(unparsed) {
-    
-    const parser = new PostalMime.default()
-    let preview = await parser.parse(unparsed)
-    $currentMail.from = preview.from      // when should i use $?
-    $currentMail.to = preview.to    
-    $currentMail.date = preview.headers[0]["value"]
-    $currentMail.subject = preview.subject
-    $currentMail.body = preview.html
+async function storeMail(unparsed) {
+    decryptedMail = await email.parseMail(unparsed)
 
     // only cache email if option is checked
     if ($boolCacheEmail) {
         let currentID
         if ($emails[0]) {
-            console.log("not empty")
             currentID = $emails[0].id+1
         } else {
-            console.log("empty")
             currentID = 0
         }
 
-        $emails = [ // can this be more optimized?
+        $emails = [
                     {
                         id: currentID,
-                        from: preview.from,
-                        to: preview.to,
-                        date: preview.headers[0]["value"],
-                        subject: preview.subject, 
+                        from: decryptedMail.from,
+                        to: decryptedMail.to,
+                        date: decryptedMail.headers[0]["value"],
+                        subject: decryptedMail.subject, 
                         raw: unparsed
                     },
                     ...$emails,
@@ -392,24 +312,14 @@ async function parseMail(unparsed) {
     }
 }
 
-function processText() {
-    let decodedbase64 = atob(inputtext)
-    console.log("decoded base64: ", decodedbase64)
-
-    console.log("compare: ", inputtext == decodedbase64)
-
-}
-
 </script>
 
 
 <h2>Decrypt E-mail</h2>
 
-
 <!-- load wasm module -->
 {#await loadModule()}
 Loading...
-
 {:catch someError}
 System error: {someError.message}.
 {/await}
@@ -460,22 +370,9 @@ allows user to see the credentials before they proceed with decryption  -->
     </button>
 </div>
 
-<!-- put in separate component? -->
+<!-- show email -->
 {#if enableDownload}
-    <h3>E-mail Preview</h3>
-
-    <b>Subject:</b> {$currentMail.subject} <br>
-    <b>Date:</b> {$currentMail.date} <br>    <!-- need to parse this date, convert to local timezone, or not? -->
-    <b>From (Sender):</b> {$currentMail.from.name} &lt;{$currentMail.from.address}&gt; <br>
-    <b>To Recipient(s): </b> 
-
-    {#each $currentMail.to as { name, address } }
-        {name} &lt;{address}&gt;, <!-- only add , if there are more than 1 recipients-->
-    {/each}
-
-
-    {@html $currentMail.body}
-
+<EmailView decryptedMail={decryptedMail} />
 {/if}
 
 <!-- download decrypted file -->
@@ -485,48 +382,12 @@ allows user to see the credentials before they proceed with decryption  -->
     </button>
 </div>
 
-<!-- <div id='block'>
-    <button class="button" on:click={testURI}>
-        process text
-    </button>
-</div> -->
-
-
-<!-- {#if fileSubmitted}
-  <p>{inFile.name} {inFile.size} bytes</p>
-  {#await inFile.text() then text}
-    {text}
-  {/await}
-{/if} -->
-
-{#if param}
-
-    <div id="textbox">
-        {param}
-    </div>
-
-    <button class="button" on:click={fromParam}>
-        send nuke
-    </button>
-{/if}
-
-
-
-
 <style>
 
 select {
     padding: 5px;
     border: 1px solid #d6d6d6;
     border-radius: 5px;
-}
-
-#textbox {
-    width: 500px;
-    height: 300px;
-    overflow: scroll;
-    overflow-wrap: break-word;
-    border: 1px solid black;
 }
 
 </style>

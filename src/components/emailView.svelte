@@ -1,29 +1,29 @@
 <script>
-import * as PostalMime from 'postal-mime'
 
-export let email
-let preview
-
-async function displayMail() {
-    const parser = new PostalMime.default()
-    preview = await parser.parse(email)
-}
-
+    export let decryptedMail = {
+        subject: null,
+        headers: [{
+            value: null
+        }],
+        from: {
+            name: null,
+            address: null
+        },
+        to: [],
+        html: null
+    }
+    
 </script>
 
+<h3>E-mail Preview</h3>
 
-<!-- load wasm module -->
-{#await displayMail()}
-Loading e-mail preview...
-{:catch someError}
-System error: {someError.message}.
-{/await}
+<b>Subject:</b> {decryptedMail.subject} <br>
+<b>Date:</b> {decryptedMail.headers[0]["value"]} <br>
+<b>From (Sender):</b> {decryptedMail.from.name} &lt;{decryptedMail.from.address}&gt; <br>
+<b>To Recipient(s): </b> 
 
+{#each decryptedMail.to as { name, address } }
+    {address}&gt;,
+{/each}
 
-<h3>Email Preview</h3>
-
-{email.subject} <br>
-{email.date} <br>
-<!-- {email.from.address} <br> -->
-<!-- {email.to.address} <br> -->
-{email.html} <br>
+{@html decryptedMail.html}

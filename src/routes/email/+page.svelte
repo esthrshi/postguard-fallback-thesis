@@ -1,36 +1,48 @@
 <script>
+// imports
+import { onMount } from 'svelte';
+import { browser } from '$app/environment'
+
+// stores
 import { emails } from './../../store/email.js'
-import * as PostalMime from 'postal-mime'
-import { browser } from '$app/environment';
-//import moment from 'moment'
+
+// components
+import EmailView from './../../components/emailView.svelte'
+
+//import * as PostalMime from 'postal-mime'
 
 let showBody = false
 
-function test() {
-    //console.log("id: ", $emails[0].id)
-    $emails = $emails.filter(x => x.id != 1)
+//let from, to, subject, date, body
+let email   // email.js
+let currentID, currentParsed, currentRaw
 
-    console.log("deleted item with id 1")
-    //console.log("find x: ", $emails.find(x => x.id === 1))
-    //arr.find(o => o.name === 'string 1');
-    //someArray = someArray.filter(person => person.name != 'John');  // is there a more efficient way to remove an element...?
+// async function showMail(id, email) {
+//     currentEmail = email
+//     currentID = id
+//     const parser = new PostalMime.default()
+//     let preview = await parser.parse(email)
+//     from = preview.from
+//     to = preview.to
+//     date = preview.headers[0]["value"]
+//     subject = preview.subject
+//     body = preview.html
+//     showBody = true
+// }
 
-    //someArray = someArray.filter(person => person.name != 'John');
-}
+onMount(() => {
+    // postalmime only works in browser
+    if (browser) {
+        import('./../../logic/email.js').then((module) => {
+            email = module
+        });
+    }
+})
 
-let from, to, subject, date, body
-let currentEmail, currentID
-
-async function showMail(id, email) {
-    currentEmail = email
+async function showMail(id, unparsed) {
+    currentRaw = unparsed
     currentID = id
-    const parser = new PostalMime.default()
-    let preview = await parser.parse(email)
-    from = preview.from
-    to = preview.to
-    date = preview.headers[0]["value"]
-    subject = preview.subject
-    body = preview.html
+    currentParsed = await email.parseMail(unparsed)
     showBody = true
 }
 
@@ -40,7 +52,7 @@ function deleteMail() {
 }
 
 function downloadMail() {
-    const downFile = new Blob([currentEmail], { type: "text/html"}) // not sure if text/html is correct....
+    const downFile = new Blob([currentRaw], { type: "text/html"})
     let a = document.createElement("a"),
         url = URL.createObjectURL(downFile)
 
@@ -53,20 +65,11 @@ function downloadMail() {
     a.remove()
 }
 
-// zip
-function downloadAll() {
-    
-}
-
 </script>
 
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 <h2>E-mail History</h2>
-
-<!-- <button on:click={test}>
-	test
-</button><br> -->
 
 <div id="client">
 
@@ -101,7 +104,7 @@ function downloadAll() {
 
             <div id='header'>
                 <div id='title'>
-                    {subject}
+                    <!-- {subject} -->
                 </div>
 
                 <div id='buttons'>
@@ -114,7 +117,9 @@ function downloadAll() {
                 </div>
             </div>
 
-            <div id='content-body'>
+            <EmailView decryptedMail={currentParsed} />
+
+            <!-- <div id='content-body'>
 
                 <b>From:</b> {from.name} &lt;{from.address}&gt;<br>
                 <b>To:</b> 
@@ -126,7 +131,7 @@ function downloadAll() {
 
                 {@html body}
 
-            </div>
+            </div> -->
         {/if}
         
     </div>
@@ -172,11 +177,6 @@ function downloadAll() {
     /* background-color: rgb(193, 59, 195); */
     width: 100%;
     padding: 10px;
-}
-
-#html-display {
-    display: flex;
-    height: 480px;
 }
 
 #header {

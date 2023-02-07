@@ -30,7 +30,7 @@
 <style>
 
 nav {
-	margin-left:-2.5em;  /* why is this necessary? */
+	margin-left:-2.5em;
 }
 
 ul {
@@ -57,7 +57,7 @@ li a:hover {
 }
 
 [aria-current]:not([aria-current="false"]) {
-	text-decoration: underline #3095de 3px;   /* why doesn't the color here work? */
+	text-decoration: underline #3095de 3px;
 }
 
 </style>

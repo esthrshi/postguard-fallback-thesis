@@ -1,4 +1,13 @@
-import * as PostalMime from 'postal-mime'
+import { browser } from '$app/environment'
+
+let PostalMime
+
+// postalmime only works in browser
+if (browser) {
+    import('postal-mime').then((module) => {
+        PostalMime = module
+    });
+}
 
 // parse email using postalmime
 export function parseMail(unparsed) {

@@ -9,7 +9,6 @@ import "@privacybydesign/irma-css";
 // extra
 import jwt_decode from "jwt-decode";
 import { onMount } from 'svelte';
-import { browser } from '$app/environment'
 
 // stores
 import { boolCacheEmail, boolCacheIRMA } from '../../store/settings.js'
@@ -18,6 +17,7 @@ import { krCache } from '../../store/jwt.js'
 
 // logic
 import * as decrypt from './decrypt.js'
+import * as email from './../../logic/email.js'
 
 // components
 import EmailView from './../../components/emailView.svelte'
@@ -64,25 +64,14 @@ let krCacheTemp =
     krCon: {}
   }
 
-let email   // email.js
 let decryptedMail
 
-// load WASM module and get key
-async function loadModule() {
-    mod = await import("@e4a/irmaseal-wasm-bindings");
-}
+onMount( async () => {
+    mod = await import("@e4a/irmaseal-wasm-bindings");  // load WASM module and get key
 
-onMount(() => {
     // listen for file upload
     const buttons = document.querySelectorAll("input");
     buttons.forEach((btn) => btn.addEventListener("change", listener));
-
-    // postalmime only works in browser
-    if (browser) {
-        import('./../../logic/email.js').then((module) => {
-            email = module
-        });
-    }
 })
 
 //take input file and get hidden policies
@@ -317,13 +306,6 @@ async function storeMail(unparsed) {
 
 <h2>Decrypt E-mail</h2>
 
-<!-- load wasm module -->
-{#await loadModule()}
-Loading...
-{:catch someError}
-System error: {someError.message}.
-{/await}
-
 <!-- encrypted file upload -->
 <p>Download the "postguard.encrypted" file that is attached to the encrypted email you received. Next, add the file here.</p>
 
@@ -372,6 +354,7 @@ allows user to see the credentials before they proceed with decryption  -->
 
 <!-- show email -->
 {#if enableDownload}
+<h2>Email preview</h2>
 <EmailView decryptedMail={decryptedMail} />
 {/if}
 

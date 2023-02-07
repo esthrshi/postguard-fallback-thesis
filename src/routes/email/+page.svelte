@@ -104,7 +104,7 @@ function downloadMail() {
 
             <div id='header'>
                 <div id='title'>
-                    <!-- {subject} -->
+                    Email preview
                 </div>
 
                 <div id='buttons'>

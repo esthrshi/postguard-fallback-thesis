@@ -9,6 +9,8 @@ import "@privacybydesign/irma-css";
 // extra
 import jwt_decode from "jwt-decode";
 import { onMount } from 'svelte';
+import { page } from '$app/stores';
+import {Base64} from 'js-base64';
 
 // stores
 import { boolCacheEmail, boolCacheIRMA } from '../../store/settings.js'
@@ -66,8 +68,16 @@ let krCacheTemp =
 
 let decryptedMail
 
+let param
+
 onMount( async () => {
     mod = await import("@e4a/irmaseal-wasm-bindings");  // load WASM module and get key
+
+    // check if there's an encrypted file in the url
+    param = $page.url.hash
+    // if(param) {
+    //     await fromParam()
+    // }
 
     // listen for file upload
     const buttons = document.querySelectorAll("input");
@@ -80,15 +90,88 @@ const listener = async (event) => {
   [inFile] = event.srcElement.files;
   const readable = inFile.stream();
 
-    try {
+  try {
+        console.log("try")
         unsealer = await mod.Unsealer.new(readable);
+        console.log("after unsealer")
         policies = unsealer.get_hidden_policies();
+        console.log("policies: ", policies)
+        oneOrMultipleRecipients();
+    }
+    catch (e) {
+        console.log("error during unsealing: ", e);
+    }
+
+//   await getUnsealer(readable)
+//   oneOrMultipleRecipients();
+}
+
+// async function fromParam() {
+//     let spliced = param.slice(11)
+//     let decoded2 = Base64.toUint8Array(spliced);
+
+//     let sealerReadable = new ReadableStream({
+//     start: (controller) => {
+//         const encoded = decoded2
+//         controller.enqueue(encoded);
+//         controller.close();
+//         },
+//     });
+
+//     await getUnsealer(sealerReadable)
+//     oneOrMultipleRecipients();
+// }
+
+// async function fromParam() {
+//     let spliced = param.slice(11)
+//     let decoded2 = Base64.toUint8Array(spliced);
+
+//     let sealerReadable = new ReadableStream({
+//     start: (controller) => {
+//         const encoded = decoded2
+//         controller.enqueue(encoded);
+//         controller.close();
+//         },
+//     });
+    
+//     await getUnsealer(sealerReadable)
+// }
+
+async function fromParam() {
+    console.log("param: ", param)
+    let spliced = param.slice(11)
+    console.log("url: ", spliced)
+    let decoded2 = Base64.toUint8Array(spliced);
+    let sealerReadable = new ReadableStream({
+    start: (controller) => {
+        const encoded = decoded2
+        controller.enqueue(encoded);
+        controller.close();
+        },
+    });
+    try {
+        console.log("try")
+        unsealer = await mod.Unsealer.new(sealerReadable);
+        //await new Promise(resolve => setTimeout(resolve, 50000))
+        console.log("after unsealer")
+        policies = unsealer.get_hidden_policies();
+        console.log("policies: ", policies)
         oneOrMultipleRecipients();
     }
     catch (e) {
         console.log("error during unsealing: ", e);
     }
 }
+
+// async function getUnsealer(readable) {
+//     try {
+//         unsealer = await mod.Unsealer.new(readable);
+//         policies = unsealer.get_hidden_policies();
+//     }
+//     catch (e) {
+//         console.log("error during unsealing: ", e);
+//     }
+// }
 
 // takes the hidden policies from the encrypted file, and checks whether there is one recipient
 // or multiple
@@ -299,16 +382,28 @@ async function storeMail(unparsed) {
 
 <h2>Decrypt E-mail</h2>
 
-<!-- encrypted file upload -->
-<p>Download the "postguard.encrypted" file that is attached to the encrypted email you received. Next, add the file here.</p>
-
 <div id='block'>
-    <input 
-        type=file 
-        id="decrypt"
-        class="button"
-    />
+    {#if param}
+        Encrypted file detected in URL
+
+        <button class="button" on:click={fromParam}>
+            Get encrypted file from URL
+        </button>
+    {/if}
 </div>
+
+<!-- encrypted file upload -->
+{#if !param}
+    <p>Download the "postguard.encrypted" file that is attached to the encrypted email you received. Next, add the file here.</p>
+
+    <div id='block'>
+        <input 
+            type=file 
+            id="decrypt"
+            class="button"
+        />
+    </div>
+{/if}
 
 <!-- show selection dropdown when there are multiple recipients-->
 <div id='block'>

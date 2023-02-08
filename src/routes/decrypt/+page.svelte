@@ -77,7 +77,6 @@ onMount( async () => {
 
 //take input file and get hidden policies
 const listener = async (event) => {
-  const decrypt = event.srcElement.classList.contains("decrypt");
   [inFile] = event.srcElement.files;
   const readable = inFile.stream();
 

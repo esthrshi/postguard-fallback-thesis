@@ -23,22 +23,22 @@ export let decryptedMail = {
 
     {#each decryptedMail.to as { name, address } }
         {name} &lt;{address}&gt;,
+    {/each}<br><br>
+
+    {#if decryptedMail.attachments[0]}
+    <b>Attachments</b>
+{/if}
+    {#each decryptedMail.attachments as att}
+    <div id="att" on:click|preventDefault={() => email.downloadAttachment(att.content, att.mimeType, att.filename)} on:keypress >
+        {att.filename},
+    </div>
     {/each}
 </div>
 
 <div class="content">
+    <b>Body</b>
     <iframe id="myIframe" srcdoc={decryptedMail.html} title="Mail message" sandbox />
 </div>
-
-{#if decryptedMail.attachments[0]}
-    <b>Attachments</b>
-{/if}
-
-{#each decryptedMail.attachments as att}
-    <div id="att" on:click|preventDefault={() => email.downloadAttachment(att.content, att.mimeType, att.filename)} on:keypress >
-        {att.filename},
-    </div>
-{/each}
 
 <style>
 
@@ -47,7 +47,8 @@ export let decryptedMail = {
 }
 
 .content {
-    height: 73%;
+    padding-top: 5px;
+    height: 65%;
 }
 
 #myIframe {

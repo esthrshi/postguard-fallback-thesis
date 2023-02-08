@@ -294,6 +294,7 @@ function storeMail(unparsed) {
 
 </script>
 
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 <h2>Decrypt E-mail</h2>
 
@@ -345,16 +346,23 @@ allows user to see the credentials before they proceed with decryption  -->
 
 <!-- show email -->
 {#if enableDownload}
-<h2>Email preview</h2>
-<EmailView decryptedMail={decryptedMail} />
-{/if}
+    <div id="client">
 
-<!-- download decrypted file -->
-<div id='block'>
-    <button class="button" disabled={!enableDownload} on:click={() => email.downloadAttachment(outFile, "text/plain", "postguard.eml")}>
-        Download
-    </button>
-</div>
+        <div id='header'>
+            <div id='title'>
+                Email preview
+            </div>
+
+            <div id='buttons'>
+                <button on:click={() => email.downloadAttachment(outFile, "text/plain", "postguard.eml")}>
+                    <span class="material-icons">download</span>
+                </button>
+            </div>
+        </div>
+
+        <EmailView decryptedMail={decryptedMail} />
+    </div>
+{/if}
 
 <style>
 
@@ -362,6 +370,24 @@ select {
     padding: 5px;
     border: 1px solid #d6d6d6;
     border-radius: 5px;
+}
+
+#client {
+    border: 1px dashed;
+    border-radius: 10px;
+    padding: 10px;
+    overflow: scroll;
+    width: 600px;
+    height: 650px;
+}
+
+#header {
+    display: flex;
+}
+
+#title {
+    width: 100%;
+    font-size: 20px;
 }
 
 </style>

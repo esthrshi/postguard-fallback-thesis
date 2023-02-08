@@ -86,16 +86,12 @@ onMount( async () => {
 
 //take input file and get hidden policies
 const listener = async (event) => {
-  const decrypt = event.srcElement.classList.contains("decrypt");
   [inFile] = event.srcElement.files;
   const readable = inFile.stream();
 
   try {
-        console.log("try")
         unsealer = await mod.Unsealer.new(readable);
-        console.log("after unsealer")
         policies = unsealer.get_hidden_policies();
-        console.log("policies: ", policies)
         oneOrMultipleRecipients();
     }
     catch (e) {
@@ -169,7 +165,6 @@ function checkRecipientCached() {
 
 // send processed policy to the server and decrypt file
 async function doDecrypt() {
-    console.log("dodecrypt start")
     if(showSelection) {
         key = keySelection
         krCacheTemp.key = key
@@ -183,7 +178,6 @@ async function doDecrypt() {
         createKr()
         await getUsk()
     }
-    console.log("dodecrypt end")
 }
 
 // cache the current credentials if user has chosen to
@@ -237,8 +231,6 @@ function createKr() {
 
 // get the usk using a cached jwt value
 async function getUskCachedJWT() {
-    console.log("getuskcachedjwt start")
-
     usk = await fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
                     headers: {
                     Authorization: `Bearer ${jwtCached}`,
@@ -249,9 +241,7 @@ async function getUskCachedJWT() {
                         return e;
                 });
 
-    console.log("getuskcachedjwt middle")
     await decryptFile()
-    console.log("getuskcachedjwt end")
 }
 
 async function getUsk() {

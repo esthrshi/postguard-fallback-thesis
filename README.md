@@ -11,7 +11,8 @@
 - Caches IRMA credentials in localstorage (user opt-in)
 - Supports deleting cached emails, and deleting cached IRMA credentials
 - Supports downloading email attachments
-- Supports including encrypted `postguard.encrypted` as a URL parameter (in separate branch, checkout `encrypted-file-in-url`)
+- Supports including encrypted `postguard.encrypted` file as a URL parameter (in separate branch, checkout `encrypted-file-in-url`)
+Takes a parameter with an encrypted file in the format: `/decrypt#encrypted={encryptedfile}`
 
 ## Limits
 - Localstorage has 10MB limit

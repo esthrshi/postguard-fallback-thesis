@@ -15,4 +15,4 @@
 
 ## Limits
 - Localstorage has 10MB limit
-- `encrypted-file-in-url` has an email size limit of 512KB
+- Including encrypted `postguard.encrypted` as a URL parameter has a size limit of 512KB

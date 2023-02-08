@@ -89,14 +89,7 @@ const listener = async (event) => {
   [inFile] = event.srcElement.files;
   const readable = inFile.stream();
 
-  try {
-        unsealer = await mod.Unsealer.new(readable);
-        policies = unsealer.get_hidden_policies();
-        oneOrMultipleRecipients();
-    }
-    catch (e) {
-        console.log("error during unsealing: ", e);
-    }
+  await getUnsealer(readable)
 }
 
 async function fromParam() {

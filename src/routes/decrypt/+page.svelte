@@ -132,6 +132,7 @@ function checkRecipientCached() {
 function doDecrypt() {
     if(showSelection) {
         key = keySelection
+        krCacheTemp.key = key
         processPolicy()
     }
 

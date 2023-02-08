@@ -40,7 +40,6 @@ h1, h2 {
   padding: 10px 15px;
   margin-right: 5px;
   text-align: center;
-  /* display: inline-block; */
   cursor: pointer;
   border-radius: 25px;
 }

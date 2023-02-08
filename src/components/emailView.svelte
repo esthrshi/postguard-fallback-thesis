@@ -3,14 +3,14 @@
 // logic
 import * as email from './../logic/email.js'
 
-    export let decryptedMail = {
-        subject: null,
-        headers: [{}],
-        from: {},
-        to: [],
-        html: null,
-        attachments: [{}]
-    }
+export let decryptedMail = {
+    subject: null,
+    headers: [{}],
+    from: {},
+    to: [],
+    html: null,
+    attachments: [{}]
+}
     
 </script>
 
@@ -35,7 +35,7 @@ import * as email from './../logic/email.js'
 {/if}
 
 {#each decryptedMail.attachments as att}
-    <div id="att" tabindex="-1" on:click|preventDefault={() => email.downloadAttachment(att.content, att.mimeType, att.filename)} on:keypress >
+    <div id="att" on:click|preventDefault={() => email.downloadAttachment(att.content, att.mimeType, att.filename)} on:keypress >
         {att.filename},
     </div>
 {/each}

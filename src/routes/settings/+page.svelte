@@ -12,18 +12,12 @@ import * as settings from './settings.js'
 function deleteAllMails() {
   if (confirm('Are you sure you want to delete all emails? This action is permanent!')) {
     $emails = []
-    console.log('All emails deleted');
-  } else {
-    console.log('Action canceled');
-}
+  }
 }
 
 function deleteAllIRMA() {
   if (confirm('Are you sure you want to delete all IRMA credentials? This action is permanent!')) {
     $krCache = []
-    console.log('All IRMA credentials deleted');
-  } else {
-    console.log('Action canceled');
   }
 }
 
@@ -33,8 +27,8 @@ function deleteThisIRMA(selected) {
 
 function parseKr(input) {
   let str = []
+
     for (const e of input) {
-      console.log(e)
       switch (e["t"]) {
         case 'pbdf.gemeente.personalData.surname': str.push("Surname"); break;
         case 'pbdf.pbdf.surfnet-2.id': str.push("Student ID: " + e["v"]); break;
@@ -77,13 +71,13 @@ function parseKr(input) {
 
     {#each $krCache as kr}
     <tr>
-        <td>{kr.key} <br>
-          {#each parseKr(kr.krCon) as cred }
-            {cred}<br>
-          {/each}
-        </td>
-        <td>{settings.timeConverter(kr.jwtValid) }</td>
-        <td><span id="deletebutton" class="material-icons" on:click|preventDefault={() => deleteThisIRMA(kr)} on:keypress>delete</span></td>
+      <td>{kr.key}<br>
+        {#each parseKr(kr.krCon) as cred }
+          {cred}<br>
+        {/each}
+      </td>
+      <td>{settings.timeConverter(kr.jwtValid) }</td>
+      <td><span id="deletebutton" class="material-icons" on:click|preventDefault={() => deleteThisIRMA(kr)} on:keypress>delete</span></td>
     </tr>
     {/each}
 

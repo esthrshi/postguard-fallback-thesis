@@ -1,7 +1,4 @@
 <script>
-// imports
-import { onMount } from 'svelte';
-import { browser } from '$app/environment'
 
 // stores
 import { emails } from './../../store/email.js'
@@ -20,7 +17,6 @@ async function showMail(id, unparsed) {
     currentRaw = unparsed
     currentID = id
     currentParsed = await email.parseMail(unparsed)
-    console.log("parsed email: ", currentParsed)
     showBody = true
 }
 

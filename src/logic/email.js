@@ -1,4 +1,5 @@
 import { browser } from '$app/environment'
+//import { boolCacheEmail, boolCacheIRMA } from './../store/settings.js'
 
 let PostalMime
 
@@ -15,14 +16,14 @@ export function parseMail(unparsed) {
     return parser.parse(unparsed)
 }
 
-// download email on button click
-export function downloadFile(outFile) {
-    const downFile = new Blob([outFile], { type: "text/html"}) // not sure if text/html is correct....
+// download email/attachment
+export function downloadAttachment(outFile, fileType, fileName) {
+    const downFile = new Blob([outFile], { type: fileType})
     let a = document.createElement("a"),
         url = URL.createObjectURL(downFile)
 
     a.href = url;
-    a.download = "postguard.eml"
+    a.download = fileName
     document.body.appendChild(a)
 
     a.click()

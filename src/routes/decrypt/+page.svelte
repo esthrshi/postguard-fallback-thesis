@@ -81,7 +81,6 @@ const listener = async (event) => {
   const readable = inFile.stream();
 
     try {
-        doReset()
         unsealer = await mod.Unsealer.new(readable);
         policies = unsealer.get_hidden_policies();
         oneOrMultipleRecipients();
@@ -268,13 +267,6 @@ async function decryptFile() {
     enableDownload = true
 }
 
-// reset values, not sure if necessary, maybe force page reload?
-function doReset() {
-    enableSubmit = enableDownload = showSelection = showCreds = false
-    keySelection = ''
-    credslist = []
-}
-
 async function storeMail(unparsed) {
     decryptedMail = await email.parseMail(unparsed)
 
@@ -360,7 +352,7 @@ allows user to see the credentials before they proceed with decryption  -->
 
 <!-- download decrypted file -->
 <div id='block'>
-    <button class="button" disabled={!enableDownload} on:click={() => email.downloadFile(outFile)}>
+    <button class="button" disabled={!enableDownload} on:click={() => email.downloadAttachment(outFile, "text/plain", "postguard.eml")}>
         Download
     </button>
 </div>

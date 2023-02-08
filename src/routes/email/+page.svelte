@@ -9,60 +9,24 @@ import { emails } from './../../store/email.js'
 // components
 import EmailView from './../../components/emailView.svelte'
 
-//import * as PostalMime from 'postal-mime'
+// logic
+import * as email from './../../logic/email.js'
 
 let showBody = false
-
-//let from, to, subject, date, body
-let email   // email.js
 let currentID, currentParsed, currentRaw
 
-// async function showMail(id, email) {
-//     currentEmail = email
-//     currentID = id
-//     const parser = new PostalMime.default()
-//     let preview = await parser.parse(email)
-//     from = preview.from
-//     to = preview.to
-//     date = preview.headers[0]["value"]
-//     subject = preview.subject
-//     body = preview.html
-//     showBody = true
-// }
-
-onMount(() => {
-    // postalmime only works in browser
-    if (browser) {
-        import('./../../logic/email.js').then((module) => {
-            email = module
-        });
-    }
-})
 
 async function showMail(id, unparsed) {
     currentRaw = unparsed
     currentID = id
     currentParsed = await email.parseMail(unparsed)
+    console.log("parsed email: ", currentParsed)
     showBody = true
 }
 
 function deleteMail() {
     $emails = $emails.filter(x => x.id != currentID)
     showBody = false
-}
-
-function downloadMail() {
-    const downFile = new Blob([currentRaw], { type: "text/html"})
-    let a = document.createElement("a"),
-        url = URL.createObjectURL(downFile)
-
-    a.href = url;
-    a.download = "postguard.eml"
-    document.body.appendChild(a)
-
-    a.click()
-    URL.revokeObjectURL(url)
-    a.remove()
 }
 
 </script>
@@ -73,42 +37,41 @@ function downloadMail() {
 
 <div id="client">
 
-<div id="sidebar">
+    <div id="sidebar">
 
-    {#each $emails as email}
-        <div id="sb-th" tabindex="-1" on:click|preventDefault={() => showMail(email.id, email.raw)} on:keypress >
+        {#each $emails as email}
+            <div id="sb-th" tabindex="-1" on:click|preventDefault={() => showMail(email.id, email.raw)} on:keypress >
 
-            <b>{email.subject}</b> <br>
-            {#if email.from.name}
-                {email.from.name}
-            {:else}
-                {email.from.address}
-            {/if} <br>
+                <b>{email.subject}</b> <br>
+                {#if email.from.name}
+                    {email.from.name}
+                {:else}
+                    {email.from.address}
+                {/if} <br>
 
-            {email.date}
-        </div>
-    {/each}
+                {email.date}
+            </div>
+        {/each}
     </div>
 
-    <div id="content"> <!-- make component of this?-->
+    <div id="content">
 
         {#if !$emails[0]}
-        <div id='noemails'>
-            <span class="material-icons">mail</span><br>
-            There are no emails here.<br>
-            Want to save your decrypted emails? Head over to <a href="/settings">settings</a> to have your emails stored in your browser.
-        </div>
+            <div id='noemails'>
+                <span class="material-icons">mail</span><br>
+                There are no emails here.<br>
+                Want to save your decrypted emails? Head over to <a href="/settings">settings</a> to have your emails stored in your browser.
+            </div>
         {/if}
 
         {#if showBody}
-
             <div id='header'>
                 <div id='title'>
                     Email preview
                 </div>
 
                 <div id='buttons'>
-                    <button on:click={downloadMail}>
+                    <button on:click={() => email.downloadAttachment(currentRaw, "text/plain", "postguard.eml")}>
                         <span class="material-icons">download</span>
                     </button>
                     <button on:click={deleteMail}>
@@ -118,20 +81,6 @@ function downloadMail() {
             </div>
 
             <EmailView decryptedMail={currentParsed} />
-
-            <!-- <div id='content-body'>
-
-                <b>From:</b> {from.name} &lt;{from.address}&gt;<br>
-                <b>To:</b> 
-                    {#each to as {name, address} }
-                    {name} &lt;{address}&gt;,
-                    {/each}
-                <br>
-                <b>Date:</b> {date}<br>
-
-                {@html body}
-
-            </div> -->
         {/if}
         
     </div>
@@ -152,7 +101,6 @@ function downloadMail() {
 
 #sidebar {
     overflow: scroll;
-    /* background-color: rgb(59, 131, 195); */
     border-right: 1px solid;
     width: 20em;
 }
@@ -168,13 +116,12 @@ function downloadMail() {
     background: rgb(236, 236, 236); 
 }
 
-#sb-th:focus {  /** focus doesn't work */
+#sb-th:focus {
     background: rgb(212, 212, 212);    
 }
 
 #content {
     overflow: auto;
-    /* background-color: rgb(193, 59, 195); */
     width: 100%;
     padding: 10px;
 }
@@ -190,7 +137,6 @@ function downloadMail() {
 
 #buttons {
     min-width: 6em;
-    /* background-color: rgb(59, 131, 195); */
 }
 
 #noemails {

@@ -1,37 +1,37 @@
 <script>
 
+// stores
 import { boolCacheEmail, boolCacheIRMA } from './../../store/settings.js'
 import { emails } from './../../store/email.js'
 import { krCache } from './../../store/jwt.js'
 
+// logic
+import * as settings from './settings.js'
+
+
 function deleteAllMails() {
   if (confirm('Are you sure you want to delete all emails? This action is permanent!')) {
-    // Save it!
     $emails = []
     console.log('All emails deleted');
   } else {
-    // Do nothing!
     console.log('Action canceled');
 }
 }
 
 function deleteAllIRMA() {
   if (confirm('Are you sure you want to delete all IRMA credentials? This action is permanent!')) {
-    // Save it!
     $krCache = []
     console.log('All IRMA credentials deleted');
   } else {
-    // Do nothing!
     console.log('Action canceled');
   }
 }
 
 function deleteThisIRMA(selected) {
-    $krCache = $krCache.filter(x => x.jwtValid != selected.jwtValid)
+    $krCache = $krCache.filter(x => x.jwt != selected.jwt)
 }
 
-function getstuff(input) {
-  console.log(input)
+function parseKr(input) {
   let str = []
     for (const e of input) {
       console.log(e)
@@ -39,36 +39,11 @@ function getstuff(input) {
         case 'pbdf.gemeente.personalData.surname': str.push("Surname"); break;
         case 'pbdf.pbdf.surfnet-2.id': str.push("Student ID: " + e["v"]); break;
         case 'pbdf.sidn-pbdf.mobilenumber.mobilenumber': str.push("Mobile number: " + e["v"]); break;
-        case 'pbdf.nuts.agb.agbcode': str.push("BSN\n"); break;
+        case 'pbdf.nuts.agb.agbcode': str.push("BSN"); break;
       }  
     }
 
-    console.log(str)
     return str
-  //   switch (expr) {
-  // case 'Oranges':
-  //   console.log('Oranges are $0.59 a pound.');
-  //   break;
-  // case 'Mangoes':
-  // case 'Papayas':
-  //   console.log('Mangoes and papayas are $2.79 a pound.');
-  //   // Expected output: "Mangoes and papayas are $2.79 a pound."
-  //   break;
-  // default:
-}
-
-// put in separate file
-function timeConverter(UNIX_timestamp){
-  var a = new Date(UNIX_timestamp * 1000);
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var year = a.getFullYear();
-  var month = months[a.getMonth()];
-  var date = a.getDate();
-  var hour = a.getHours();
-  var min = a.getMinutes();
-  var sec = a.getSeconds();
-  var time = date + ' ' + month + ' ' + year + ' ' + hour + ':' + min + ':' + sec ;
-  return time;
 }
 
 </script>
@@ -103,11 +78,11 @@ function timeConverter(UNIX_timestamp){
     {#each $krCache as kr}
     <tr>
         <td>{kr.key} <br>
-          {#each getstuff(kr.krCon) as cred }
+          {#each parseKr(kr.krCon) as cred }
             {cred}<br>
           {/each}
         </td>
-        <td>{timeConverter (kr.jwtValid) }</td>
+        <td>{settings.timeConverter(kr.jwtValid) }</td>
         <td><span id="deletebutton" class="material-icons" on:click|preventDefault={() => deleteThisIRMA(kr)} on:keypress>delete</span></td>
     </tr>
     {/each}
@@ -145,10 +120,6 @@ h3 {
   border: 1px solid #d6d6d6;
   padding: 7px;
 }
-
-/* #creds tr:nth-child(even) {
-  background-color: #f9f9f9;
-} */
 
 #creds tr:hover {
   background-color: #ddd;

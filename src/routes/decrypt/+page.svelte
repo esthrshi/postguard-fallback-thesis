@@ -9,6 +9,8 @@ import "@privacybydesign/irma-css";
 // extra
 import jwt_decode from "jwt-decode";
 import { onMount } from 'svelte';
+import { page } from '$app/stores';
+import {Base64} from 'js-base64';
 
 // stores
 import { boolCacheEmail, boolCacheIRMA } from '../../store/settings.js'
@@ -66,8 +68,16 @@ let krCacheTemp =
 
 let decryptedMail
 
+let param
+
 onMount( async () => {
     mod = await import("@e4a/irmaseal-wasm-bindings");  // load WASM module and get key
+
+    // check if there's an encrypted file in the url
+    param = $page.url.hash
+    if(param) {
+        await fromParam()
+    }
 
     // listen for file upload
     const buttons = document.querySelectorAll("input");
@@ -80,6 +90,35 @@ const listener = async (event) => {
   [inFile] = event.srcElement.files;
   const readable = inFile.stream();
 
+  try {
+        console.log("try")
+        unsealer = await mod.Unsealer.new(readable);
+        console.log("after unsealer")
+        policies = unsealer.get_hidden_policies();
+        console.log("policies: ", policies)
+        oneOrMultipleRecipients();
+    }
+    catch (e) {
+        console.log("error during unsealing: ", e);
+    }
+}
+
+async function fromParam() {
+    let spliced = param.slice(11)
+    let decoded2 = Base64.toUint8Array(spliced);
+
+    let sealerReadable = new ReadableStream({
+    start: (controller) => {
+        const encoded = decoded2
+        controller.enqueue(encoded);
+        controller.close();
+        },
+    });
+
+    await getUnsealer(sealerReadable)
+}
+
+async function getUnsealer(readable) {
     try {
         unsealer = await mod.Unsealer.new(readable);
         policies = unsealer.get_hidden_policies();
@@ -129,7 +168,8 @@ function checkRecipientCached() {
 }
 
 // send processed policy to the server and decrypt file
-function doDecrypt() {
+async function doDecrypt() {
+    console.log("dodecrypt start")
     if(showSelection) {
         key = keySelection
         krCacheTemp.key = key
@@ -137,12 +177,13 @@ function doDecrypt() {
     }
 
     if(boolRecipientCached) {
-        getUskCachedJWT()
+        await getUskCachedJWT()
     } else {
         stripCredentials()
         createKr()
-        getUsk()
+        await getUsk()
     }
+    console.log("dodecrypt end")
 }
 
 // cache the current credentials if user has chosen to
@@ -196,6 +237,7 @@ function createKr() {
 
 // get the usk using a cached jwt value
 async function getUskCachedJWT() {
+    console.log("getuskcachedjwt start")
 
     usk = await fetch(`${pkg}/v2/request/key/${timestamp.toString()}`, {
                     headers: {
@@ -207,7 +249,9 @@ async function getUskCachedJWT() {
                         return e;
                 });
 
-    decryptFile()
+    console.log("getuskcachedjwt middle")
+    await decryptFile()
+    console.log("getuskcachedjwt end")
 }
 
 async function getUsk() {
@@ -259,18 +303,17 @@ async function getUsk() {
         usk = await irma.start();
 
         cacheCredentials()
-        decryptFile()
+        await decryptFile()
 }
 
 async function decryptFile() {
     await unsealer.unseal(key, usk, unsealerWritable);
+    decryptedMail = await email.parseMail(outFile)
     storeMail(outFile)
     enableDownload = true
 }
 
-async function storeMail(unparsed) {
-    decryptedMail = await email.parseMail(unparsed)
-
+function storeMail(unparsed) {
     // only cache email if option is checked
     if ($boolCacheEmail) {
         let currentID
@@ -299,16 +342,24 @@ async function storeMail(unparsed) {
 
 <h2>Decrypt E-mail</h2>
 
-<!-- encrypted file upload -->
-<p>Download the "postguard.encrypted" file that is attached to the encrypted email you received. Next, add the file here.</p>
-
 <div id='block'>
-    <input 
-        type=file 
-        id="decrypt"
-        class="button"
-    />
+    {#if param}
+        Encrypted file detected in URL
+    {/if}
 </div>
+
+<!-- encrypted file upload -->
+{#if !param}
+    <p>Download the "postguard.encrypted" file that is attached to the encrypted email you received. Next, add the file here.</p>
+
+    <div id='block'>
+        <input 
+            type=file 
+            id="decrypt"
+            class="button"
+        />
+    </div>
+{/if}
 
 <!-- show selection dropdown when there are multiple recipients-->
 <div id='block'>
